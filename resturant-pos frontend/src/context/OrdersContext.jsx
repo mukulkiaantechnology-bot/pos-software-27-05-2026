@@ -81,37 +81,61 @@ export const OrdersProvider = ({ children }) => {
 
   const addOrder = async (cartItems, extraData = {}) => {
     try {
-      const subtotal = cartItems.reduce((acc, i) => acc + (i.price * (i.qty || i.quantity || 0)), 0);
-      const tax = extraData.tax || subtotal * 0.05;
-      const total = extraData.total || (subtotal + tax + (extraData.serviceFee || 0));
+      // Build items array with full addon + size info
+      const items = cartItems.map(item => {
+        // Addon price sum per unit
+        const parsedAddons = Array.isArray(item.selectedAddons)
+          ? item.selectedAddons
+          : (item.selectedAddons
+              ? (() => { try { return JSON.parse(item.selectedAddons); } catch { return []; } })()
+              : []);
+        const addonPricePerUnit = parsedAddons.reduce((s, a) => s + (parseFloat(a.price) || 0), 0);
+
+        const basePrice = parseFloat(item.price);
+        const qty = item.qty || item.quantity || 1;
+        const unitTotal = basePrice; // base price is already size-adjusted in cart
+        const totalForItem = parseFloat(((unitTotal + addonPricePerUnit) * qty).toFixed(2));
+
+        return {
+          menu_item_id: item.itemId || item.id,
+          quantity: qty,
+          unit_price: unitTotal,
+          total_price: totalForItem,
+          addons: parsedAddons.length > 0 ? parsedAddons : null,
+          size_name: item.sizeName || item.size_name || null,
+          size_price: item.sizePrice || item.size_price || null
+        };
+      });
+
+      // Correct subtotal includes addon prices
+      const subtotal = items.reduce((acc, i) => acc + i.total_price, 0);
+      const tax = extraData.tax || parseFloat((subtotal * 0.05).toFixed(2));
+      const discount = extraData.discount || 0;
+      const serviceChargePercent = extraData.serviceChargePercent || 0;
+      const serviceChargeAmount = extraData.serviceChargeAmount || parseFloat((subtotal * serviceChargePercent / 100).toFixed(2));
+      const total = parseFloat((subtotal + tax - discount + serviceChargeAmount).toFixed(2));
 
       const orderData = {
         order_number: `ORD-${Date.now()}`,
-        subtotal: subtotal,
-        tax: tax,
-        discount: extraData.discount || 0,
-        serviceChargePercent: extraData.serviceChargePercent || 0,
-        service_charge_percent: extraData.serviceChargePercent || 0,
-        serviceChargeAmount: extraData.serviceChargeAmount || 0,
-        service_charge_amount: extraData.serviceChargeAmount || 0,
+        subtotal,
+        tax,
+        discount,
+        serviceChargePercent,
+        service_charge_percent: serviceChargePercent,
+        serviceChargeAmount,
+        service_charge_amount: serviceChargeAmount,
         grand_total: total,
         order_type: extraData.type?.toLowerCase() || 'dine-in',
         table_id: extraData.tableId || null,
         customer_id: extraData.customerId || null,
         user_id: extraData.userId || null,
         payment_status: extraData.paymentStatus || 'pending',
-        order_status: 'new'
+        order_status: 'new',
+        notes: extraData.notes || null
       };
 
-      const items = cartItems.map(item => ({
-        menu_item_id: item.itemId || item.id,
-        quantity: item.qty || item.quantity,
-        unit_price: item.price,
-        total_price: item.price * (item.qty || item.quantity)
-      }));
-
       const response = await api.post('/orders', { orderData, items });
-      fetchOrders(); // Refresh list
+      fetchOrders();
       return response.data.data;
     } catch (error) {
       console.error('Error creating order:', error);

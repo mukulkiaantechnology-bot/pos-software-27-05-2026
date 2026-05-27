@@ -60,7 +60,11 @@ class MenuModel extends BaseModel {
       }
     }
 
-    // 2. Insert Item
+    // 2. Resolve availability — DB column is varchar(20)
+    const validStatuses = ['In Stock', 'Out of Stock', 'Low Stock'];
+    const availabilityStr = validStatuses.includes(available) ? available : 'In Stock';
+
+    // 3. Serialize addons/sizes
     const addonsStr = data.addons ? (typeof data.addons === 'string' ? data.addons : JSON.stringify(data.addons)) : null;
     const sizesStr = data.sizes ? (typeof data.sizes === 'string' ? data.sizes : JSON.stringify(data.sizes)) : null;
 
@@ -74,7 +78,7 @@ class MenuModel extends BaseModel {
       price || 0,
       image || '🍽️',
       description || '',
-      available || 'In Stock',
+      availabilityStr,
       data.rating || 0,
       data.popular ? 1 : 0,
       addonsStr,
@@ -95,7 +99,10 @@ class MenuModel extends BaseModel {
     if (price !== undefined) updateData.price = price;
     if (image !== undefined) updateData.image = image;
     if (description !== undefined) updateData.description = description;
-    if (available !== undefined) updateData.availability = available;
+    if (available !== undefined) {
+      const validStatuses = ['In Stock', 'Out of Stock', 'Low Stock'];
+      updateData.availability = validStatuses.includes(available) ? available : 'In Stock';
+    }
     if (data.rating !== undefined) updateData.rating = data.rating;
     if (data.popular !== undefined) updateData.popular = data.popular ? 1 : 0;
 

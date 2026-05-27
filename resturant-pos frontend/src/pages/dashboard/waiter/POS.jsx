@@ -162,25 +162,45 @@ const POS = () => {
     const parsedAddons = item.addons ? (typeof item.addons === 'string' ? JSON.parse(item.addons) : item.addons) : [];
 
     // If item has portions or addons, and we haven't selected them yet, open selector
-    if ((parsedSizes.length > 0 || parsedAddons.length > 0) && !selectedSize) {
+    // selectedSize === null means user clicked the item directly (not via addon modal confirm)
+    if ((parsedSizes.length > 0 || parsedAddons.length > 0) && selectedSize === null && selectedAddons.length === 0) {
       setSelectedItemForAddons(item);
       return;
     }
 
-    const itemPrice = selectedSize ? selectedSize.price : item.price;
-    const itemName = selectedSize ? `${item.item_name || item.name} (${selectedSize.name})` : (item.item_name || item.name);
-    const cartId = selectedSize ? `${item.id}-${selectedSize.name}` : `${item.id}`;
+    // Base price = item base price + size delta price (if a size was selected)
+    const sizeDelta = selectedSize ? (parseFloat(selectedSize.price) || 0) : 0;
+    const itemPrice = parseFloat(item.price) + sizeDelta;
+    const itemName = selectedSize
+      ? `${item.item_name || item.name} (${selectedSize.name})`
+      : (item.item_name || item.name);
+
+    // Make cartId unique per size + addon combination
+    const sortedAddonKeys = [...selectedAddons].map(a => a.name).sort().join('|');
+    const cartId = `${item.id}-${selectedSize ? selectedSize.name : 'default'}-${sortedAddonKeys}`;
 
     setCart(prev => {
       const existing = prev.find(i => i.cartId === cartId);
       if (existing) {
         return prev.map(i => i.cartId === cartId ? { ...i, qty: i.qty + 1 } : i);
       }
-      return [...prev, { ...item, cartId, name: itemName, price: itemPrice, qty: 1, note: '' }];
+      return [...prev, {
+        ...item,
+        cartId,
+        name: itemName,
+        price: itemPrice,
+        qty: 1,
+        note: '',
+        // Persist addon/size info for order submission
+        selectedAddons: selectedAddons.length > 0 ? selectedAddons : null,
+        sizeName: selectedSize ? selectedSize.name : null,
+        sizePrice: selectedSize ? sizeDelta : null
+      }];
     });
-    
+
     if (selectedItemForAddons) setSelectedItemForAddons(null);
   };
+
 
   const removeFromCart = (cartId) => {
     setCart(prev => prev.filter(i => i.cartId !== cartId));
@@ -523,36 +543,56 @@ const POS = () => {
                   <div 
                     key={item.id} 
                     onClick={() => addToCart(item)}
-                    className="card group cursor-pointer p-5 flex flex-col items-center justify-center text-center relative overflow-hidden bg-white min-h-[190px] h-full transition-all hover:shadow-[0_15px_30px_rgba(108,99,255,0.06)] hover:-translate-y-1 active:scale-95 shadow-[0_10px_30px_rgba(0,0,0,0.02)] border border-black/[0.02] rounded-[24px]"
+                    className="card group cursor-pointer p-4 flex flex-col justify-between relative overflow-hidden bg-white min-h-[260px] h-full transition-all duration-300 hover:shadow-premium-hover hover:-translate-y-1.5 active:scale-[0.98] border border-black/[0.03] rounded-[24px]"
                   >
-                    {/* Floating Price tag */}
-                    <div className="absolute top-3 right-3 z-20">
-                       <span className="badge bg-primary-light text-primary border border-primary/10 text-[9px] font-black tracking-tight px-2.5 py-1 shadow-sm rounded-full">
-                          ₹{item.price}
-                       </span>
+                    {/* Top Section: Image & Floating Badge */}
+                    <div className="relative w-full h-32 rounded-2xl overflow-hidden bg-slate-50 border border-black/[0.01] shrink-0 mb-3.5 transition-transform duration-500 group-hover:scale-102">
+                      {/* Floating Price tag */}
+                      <div className="absolute top-2.5 right-2.5 z-20">
+                         <span className="bg-slate-900 text-white font-extrabold text-[10px] tracking-tight px-3 py-1 shadow-md rounded-full">
+                            ₹{item.price}
+                         </span>
+                      </div>
+
+                      {/* Cover Image/Emoji container */}
+                      <div className="w-full h-full flex items-center justify-center">
+                          {getImageUrl(item.image).length > 2 ? (
+                            <img 
+                              src={getImageUrl(item.image)} 
+                              alt={item.item_name || item.name} 
+                              className="w-full h-full object-cover" 
+                            />
+                          ) : (
+                            <div className="w-14 h-14 rounded-full bg-primary-light flex items-center justify-center text-2xl select-none">
+                              {getImageUrl(item.image)}
+                            </div>
+                          )}
+                      </div>
                     </div>
 
-                    {/* Centered Circular Image container */}
-                    <div className="w-18 h-18 rounded-full bg-slate-50/50 flex items-center justify-center overflow-hidden border border-black/[0.01] mb-3.5 shrink-0 shadow-inner transition-transform duration-500 group-hover:scale-105">
-                        {getImageUrl(item.image).length > 2 ? (
-                          <img 
-                            src={getImageUrl(item.image)} 
-                            alt={item.item_name || item.name} 
-                            className="w-full h-full object-cover" 
-                          />
-                        ) : (
-                          <span className="text-3xl">{getImageUrl(item.image)}</span>
-                        )}
-                    </div>
+                    {/* Typography info (Left Aligned) */}
+                    <div className="relative z-10 flex flex-col flex-1 justify-between">
+                      <div className="text-left">
+                        <h4 className="font-extrabold text-slate-800 text-[13px] md:text-sm leading-tight uppercase tracking-tight break-words line-clamp-1">
+                          {item.item_name || item.name || "Unnamed Item"}
+                        </h4>
+                        <p className="text-slate-400 text-[10px] font-medium leading-relaxed line-clamp-2 mt-1">
+                          {item.description || "Prepared fresh with premium ingredients."}
+                        </p>
+                      </div>
 
-                    {/* Typography info */}
-                    <div className="relative z-10 flex flex-col items-center">
-                      <h4 className="font-extrabold text-slate-800 text-xs md:text-sm leading-tight uppercase tracking-tight break-words px-1">
-                        {item.item_name || item.name || "Unnamed Item"}
-                      </h4>
-                      <p className="text-slate-400 text-[9px] font-medium leading-relaxed line-clamp-2 mt-1 px-1">
-                        {item.description || "Prepared fresh with premium ingredients."}
-                      </p>
+                      {/* Footer Info Row */}
+                      <div className="flex items-center justify-between mt-3 pt-2 border-t border-black/[0.01]">
+                        <span className="text-[9px] font-bold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                          Ready
+                        </span>
+                        <button 
+                          type="button"
+                          className="w-7 h-7 rounded-xl bg-gradient-premium text-white flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-md shadow-primary/10 select-none cursor-pointer"
+                        >
+                          <span className="text-xs font-black">+</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))
@@ -1053,21 +1093,23 @@ const POS = () => {
             addons={parsedAddons}
             onClose={() => setSelectedItemForAddons(null)}
             onSave={(chosenSize, chosenAddons) => {
-              // Calculate final unit price
-              const basePrice = chosenSize ? chosenSize.price : item.price;
-              const addonsPrice = chosenAddons.reduce((sum, a) => sum + a.price, 0);
+              // Base price = item price + size delta (size price is an ADD-ON delta, not replacement)
+              const sizeDelta = chosenSize ? (parseFloat(chosenSize.price) || 0) : 0;
+              const basePrice = parseFloat(item.price) + sizeDelta;
+              // Display price in cart = base + addon prices (for visual only)
+              const addonsPrice = chosenAddons.reduce((sum, a) => sum + (parseFloat(a.price) || 0), 0);
               const finalPrice = basePrice + addonsPrice;
 
-              // Generate name and list of selected addons
+              // Generate name with size and addon suffix
               const nameSuffix = [
                 chosenSize ? chosenSize.name : '',
                 ...chosenAddons.map(a => a.name)
-              ].filter(Boolean).join(' • ');
+              ].filter(Boolean).join(' + ');
 
               const finalName = nameSuffix ? `${item.item_name || item.name} (${nameSuffix})` : (item.item_name || item.name);
               
               // Sort addons to get a deterministic cartId
-              const sortedAddonKeys = chosenAddons.map(a => a.name).sort().join('_');
+              const sortedAddonKeys = chosenAddons.map(a => a.name).sort().join('|');
               const cartId = `${item.id}-${chosenSize ? chosenSize.name : 'default'}-${sortedAddonKeys}`;
 
               setCart(prev => {
@@ -1079,10 +1121,13 @@ const POS = () => {
                   ...item, 
                   cartId, 
                   name: finalName, 
-                  price: finalPrice, 
+                  price: finalPrice,   // shown in cart UI (base + addons)
                   qty: 1, 
                   note: '', 
-                  addons: [chosenSize, ...chosenAddons].filter(Boolean)
+                  // Separate fields for order submission
+                  selectedAddons: chosenAddons.length > 0 ? chosenAddons : null,
+                  sizeName: chosenSize ? chosenSize.name : null,
+                  sizePrice: sizeDelta > 0 ? sizeDelta : null
                 }];
               });
 
@@ -1205,8 +1250,8 @@ const AddonSelectionModal = ({ item, sizes, addons, onClose, onSave }) => {
     });
   };
 
-  const basePrice = selectedSize ? selectedSize.price : item.price;
-  const addonsTotal = selectedAddons.reduce((sum, a) => sum + a.price, 0);
+  const basePrice = parseFloat(item.price) + (selectedSize ? parseFloat(selectedSize.price) || 0 : 0);
+  const addonsTotal = selectedAddons.reduce((sum, a) => sum + (parseFloat(a.price) || 0), 0);
   const totalPrice = basePrice + addonsTotal;
 
   return createPortal(
@@ -1215,92 +1260,145 @@ const AddonSelectionModal = ({ item, sizes, addons, onClose, onSave }) => {
       <div onClick={onClose} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-10" />
 
       {/* Modal Container */}
-      <div className="relative w-full max-w-md bg-surface/95 backdrop-blur-xl rounded-[24px] p-6 sm:p-8 shadow-2xl border border-white/20 z-20 animate-in fade-in zoom-in duration-300">
-        <h3 className="text-xl sm:text-2xl font-black text-center uppercase tracking-tight text-text-primary leading-tight">
-          {item.item_name || item.name}
-        </h3>
-        <p className="text-[9px] font-black text-slate-400 text-center uppercase tracking-[0.25em] mt-1.5 leading-none">
-           Customize your selection
-        </p>
-
-        {/* Portion selection */}
-        {sizes.length > 0 && (
-          <div className="mt-6 space-y-3">
-            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block ml-1">Select Portion Size</span>
-            <div className="grid grid-cols-2 gap-3">
-              {sizes.map(s => (
-                <button
-                  key={s.name}
-                  type="button"
-                  onClick={() => setSelectedSize(s)}
-                  className={cn(
-                    "p-3.5 rounded-[18px] border flex flex-col items-center justify-center transition-all cursor-pointer active:scale-95",
-                    selectedSize?.name === s.name 
-                      ? "border-primary bg-primary-light text-primary shadow-sm shadow-primary/5 font-extrabold" 
-                      : "border-slate-100 bg-slate-50/30 text-slate-500 hover:bg-slate-50"
-                  )}
-                >
-                  <span className="text-[10px] font-black uppercase tracking-wider">{s.name}</span>
-                  <span className="text-xs font-black mt-1">₹{s.price}</span>
-                </button>
-              ))}
+      <div className="relative w-full max-w-3xl bg-white rounded-[32px] p-8 shadow-2xl border border-black/[0.04] z-20 animate-in fade-in zoom-in duration-300 flex flex-col max-h-[90vh] overflow-hidden">
+        
+        {/* Modal Header Row */}
+        <div className="flex items-center justify-between pb-6 border-b border-slate-50 shrink-0">
+          <div className="flex items-center">
+            {/* Rounded square container for image/emoji */}
+            <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100 shrink-0 select-none">
+              {getImageUrl(item.image).length > 2 ? (
+                <img 
+                  src={getImageUrl(item.image)} 
+                  alt={item.item_name || item.name} 
+                  className="w-full h-full object-cover rounded-2xl" 
+                />
+              ) : (
+                <span className="text-2xl">{getImageUrl(item.image)}</span>
+              )}
+            </div>
+            
+            {/* Header typography info */}
+            <div className="flex flex-col text-left pl-4">
+              <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight leading-tight">
+                {item.item_name || item.name}
+              </h3>
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1.5 leading-none">
+                Customize Portion & Modifiers
+              </p>
             </div>
           </div>
-        )}
 
-        {/* Toppings / Addons selection */}
-        {addons.length > 0 && (
-          <div className="mt-6 space-y-3">
-            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block ml-1">Optional Extras / Toppings</span>
-            <div className="space-y-2 max-h-[160px] overflow-y-auto scrollbar-hide pr-1">
-              {addons.map(a => {
-                const isSelected = selectedAddons.some(addon => addon.name === a.name);
-                return (
-                  <button
-                    key={a.name}
-                    type="button"
-                    onClick={() => toggleAddon(a)}
-                    className={cn(
-                      "w-full flex items-center justify-between p-4 border rounded-[18px] transition-all cursor-pointer active:scale-[0.98]",
-                      isSelected 
-                        ? "border-emerald-500/20 bg-emerald-50/30 text-emerald-600 font-extrabold" 
-                        : "border-slate-100/70 bg-slate-50/30 text-slate-500 hover:bg-slate-50"
-                    )}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={cn("w-4 h-4 rounded border flex items-center justify-center text-white text-[10px] transition-all duration-200", isSelected ? "bg-emerald-500 border-emerald-500" : "border-slate-300 bg-white")}>
-                        {isSelected && '✓'}
-                      </div>
-                      <span className="text-[10px] font-black uppercase tracking-wider">{a.name}</span>
-                    </div>
-                    <span className="text-xs font-black">+₹{a.price}</span>
-                  </button>
-                );
-              })}
+          {/* Close Button "X" */}
+          <button 
+            onClick={onClose} 
+            className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all cursor-pointer select-none"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Modal Content Area (Scrollable) */}
+        <div className="flex-1 overflow-y-auto py-6 pr-1 space-y-8 scrollbar-hide">
+          
+          {/* Portion Size selection */}
+          {sizes.length > 0 && (
+            <div className="space-y-4">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.18em] block text-left">
+                Select Portion Size
+              </span>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {sizes.map(s => {
+                  const isSelected = selectedSize?.name === s.name;
+                  const deltaPrice = parseFloat(s.price) || 0;
+                  return (
+                    <button
+                      key={s.name}
+                      type="button"
+                      onClick={() => setSelectedSize(s)}
+                      className={cn(
+                        "p-4 rounded-[14px] border flex flex-col items-center justify-center min-h-[72px] transition-all cursor-pointer active:scale-95 text-center",
+                        isSelected 
+                          ? "border-primary bg-primary-light/35 text-primary font-black shadow-sm" 
+                          : "border-slate-100 bg-white text-slate-600 hover:bg-slate-50/50 hover:border-slate-200"
+                      )}
+                    >
+                      <span className="text-[10.5px] font-black uppercase tracking-wider leading-tight">{s.name}</span>
+                      {deltaPrice > 0 && (
+                        <span className="text-[9.5px] font-extrabold text-primary tracking-tight mt-1">
+                          +₹{deltaPrice.toFixed(2)}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Final pricing and submit button */}
-        <div className="mt-8 border-t border-black/[0.03] pt-6 flex items-center justify-between bg-surface/20 rounded-2xl">
-          <div className="flex flex-col">
-            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Total Price</span>
-            <span className="text-xl font-black text-slate-900 tracking-tighter leading-none mt-1">₹{totalPrice}</span>
+          {/* Addons / Toppings selection */}
+          {addons.length > 0 && (
+            <div className="space-y-4">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.18em] block text-left">
+                Select Modifiers
+              </span>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {addons.map(a => {
+                  const isSelected = selectedAddons.some(addon => addon.name === a.name);
+                  const addonPrice = parseFloat(a.price) || 0;
+                  return (
+                    <button
+                      key={a.name}
+                      type="button"
+                      onClick={() => toggleAddon(a)}
+                      className={cn(
+                        "p-4 rounded-[14px] border flex flex-col items-center justify-center min-h-[72px] transition-all cursor-pointer active:scale-95 text-center",
+                        isSelected 
+                          ? "border-primary bg-primary-light/35 text-primary font-black shadow-sm" 
+                          : "border-slate-100 bg-white text-slate-600 hover:bg-slate-50/50 hover:border-slate-200"
+                      )}
+                    >
+                      <span className="text-[10.5px] font-black uppercase tracking-wider leading-tight break-words px-1">{a.name}</span>
+                      {addonPrice > 0 && (
+                        <span className="text-[9.5px] font-extrabold text-primary tracking-tight mt-1">
+                          +₹{addonPrice.toFixed(2)}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Final Pricing & Actions Bottom Bar */}
+        <div className="mt-auto border-t border-slate-100 pt-6 flex items-center justify-between shrink-0 bg-white w-full">
+          {/* Price Label (Left Aligned) */}
+          <div className="flex flex-col text-left">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">
+              Calculated Price
+            </span>
+            <span className="text-2xl font-black text-slate-800 tracking-tight leading-none mt-1.5">
+              ₹{totalPrice.toFixed(2)}
+            </span>
           </div>
-          <div className="flex gap-2">
+          
+          {/* Side-by-Side Action Buttons (Right Aligned) */}
+          <div className="flex items-center gap-3">
             <button 
               type="button"
               onClick={onClose}
-              className="px-5 py-3 border border-slate-100/70 bg-white rounded-[18px] font-black uppercase tracking-widest text-[9px] text-slate-400 hover:bg-slate-50 cursor-pointer active:scale-95 transition-all"
+              className="px-6 py-3 border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700 font-bold uppercase tracking-wider text-[10px] rounded-xl cursor-pointer active:scale-95 transition-all select-none"
             >
               Cancel
             </button>
             <button 
               type="button"
               onClick={() => onSave(selectedSize, selectedAddons)}
-              className="px-6 py-3 bg-gradient-premium text-white rounded-[18px] font-black uppercase tracking-widest text-[9px] cursor-pointer active:scale-95 shadow-lg shadow-primary/15 transition-all"
+              className="px-8 py-3 bg-primary hover:bg-primary-hover text-white font-bold uppercase tracking-wider text-[10px] rounded-xl cursor-pointer active:scale-95 shadow-md shadow-primary/10 transition-all select-none"
             >
-              Add To Cart
+              Add To Bill
             </button>
           </div>
         </div>

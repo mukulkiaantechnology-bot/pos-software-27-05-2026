@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   Plus, 
@@ -42,17 +42,17 @@ const Menu = () => {
 
   // Responsive Category Management Local States
   const [localCategories, setLocalCategories] = useState([
-    { id: 1, category_name: 'Breakfast', icon: '🍳', itemCount: 5 },
-    { id: 2, category_name: 'Burgers', icon: '🍔', itemCount: 8 },
-    { id: 3, category_name: 'Drinks', icon: '🥤', itemCount: 12 },
-    { id: 4, category_name: 'Smoothies', icon: '🍓', itemCount: 4 },
-    { id: 5, category_name: 'Salads', icon: '🥗', itemCount: 6 }
+    { id: 1, category_name: 'Breakfast', icon: 'ðŸ³', itemCount: 5 },
+    { id: 2, category_name: 'Burgers', icon: 'ðŸ”', itemCount: 8 },
+    { id: 3, category_name: 'Drinks', icon: 'ðŸ¥¤', itemCount: 12 },
+    { id: 4, category_name: 'Smoothies', icon: 'ðŸ“', itemCount: 4 },
+    { id: 5, category_name: 'Salads', icon: 'ðŸ¥—', itemCount: 6 }
   ]);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
   const [categoryFormData, setCategoryFormData] = useState({
     name: '',
-    image: '🍽️'
+    image: 'ðŸ½ï¸'
   });
   const [inlineEditingId, setInlineEditingId] = useState(null);
   const [inlineEditValue, setInlineEditValue] = useState('');
@@ -68,7 +68,7 @@ const Menu = () => {
         return {
           id: cat.id,
           category_name: cat.category_name,
-          icon: cat.icon || '🍽️',
+          icon: cat.icon || 'ðŸ½ï¸',
           itemCount
         };
       });
@@ -95,7 +95,7 @@ const Menu = () => {
   const handleSaveCategory = (data) => {
     const payload = {
       category_name: data.name,
-      icon: data.image || '🍽️'
+      icon: data.image || 'ðŸ½ï¸'
     };
 
     if (editingCategory) {
@@ -141,7 +141,7 @@ const Menu = () => {
     const cat = localCategories.find(c => c.id === id);
     const payload = {
       category_name: newName,
-      icon: cat ? cat.icon : '🍽️'
+      icon: cat ? cat.icon : 'ðŸ½ï¸'
     };
     updateCategory(id, payload).then(res => {
       if (res.success) {
@@ -164,7 +164,9 @@ const Menu = () => {
       image: itemData.image,
       available: itemData.status,
       rating: itemData.rating,
-      popular: itemData.popular
+      popular: itemData.popular,
+      sizes: itemData.sizes && itemData.sizes.length > 0 ? JSON.stringify(itemData.sizes) : null,
+      addons: itemData.addons && itemData.addons.length > 0 ? JSON.stringify(itemData.addons) : null
     };
 
     if (editingItem) {
@@ -209,7 +211,7 @@ const Menu = () => {
     ...item,
     name: item.item_name,
     category: item.category_name || item.category, // Handle both cases
-    image: item.image || '🍽️',
+    image: item.image || 'ðŸ½ï¸',
     rating: item.rating || 5.0,
     status: item.status || (item.available === '1' || item.available === true ? 'In Stock' : 'Out of Stock')
   }))
@@ -258,7 +260,7 @@ const Menu = () => {
             <p className="text-text-secondary mt-1 text-[10px] lg:text-xs font-medium">Create and manage food categories</p>
           </div>
           <button 
-            onClick={() => { setEditingCategory(null); setCategoryFormData({ name: '', image: '🍽️' }); setShowCategoryModal(true); }}
+            onClick={() => { setEditingCategory(null); setCategoryFormData({ name: '', image: 'ðŸ½ï¸' }); setShowCategoryModal(true); }}
             className="btn-primary flex items-center justify-center gap-2 py-2.5 px-5 shadow-xl shadow-primary/20 text-[10px] uppercase tracking-widest font-black transition-all hover:scale-[1.02] active:scale-95 cursor-pointer w-full sm:w-auto"
           >
             <Plus className="w-4 h-4 stroke-[3]" /> Add Category
@@ -279,7 +281,7 @@ const Menu = () => {
                   {cat.icon && cat.icon.length > 2 ? (
                     <img src={cat.icon} alt={cat.category_name} className="w-full h-full object-cover" />
                   ) : (
-                    <span>{cat.icon || '🍽️'}</span>
+                    <span>{cat.icon || 'ðŸ½ï¸'}</span>
                   )}
                 </div>
 
@@ -445,7 +447,7 @@ const Menu = () => {
                               <div>
                                  <span className="font-black text-text-primary text-base tracking-tight leading-none">{item.name}</span>
                                  <p className="text-[10px] font-bold text-slate-400 mt-1.5 uppercase tracking-widest flex items-center gap-2">
-                                    <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" /> {item.rating} {item.popular ? '• Popular' : ''}
+                                    <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" /> {item.rating} {item.popular ? 'â€¢ Popular' : ''}
                                  </p>
                               </div>
                             </div>
@@ -453,7 +455,7 @@ const Menu = () => {
                           <td className="px-8 py-5">
                              <span className="badge bg-indigo-50 text-primary font-black border-none text-[8px] uppercase tracking-widest">{item.category}</span>
                           </td>
-                          <td className="px-8 py-5 font-black text-text-primary text-lg tracking-tighter">₹{item.price}</td>
+                          <td className="px-8 py-5 font-black text-text-primary text-lg tracking-tighter">â‚¹{item.price}</td>
                           <td className="px-8 py-5">
                             <button 
                               onClick={(e) => { e.stopPropagation(); toggleAvailability(item.id); }}
@@ -535,9 +537,9 @@ const Menu = () => {
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-start">
                           <h4 className="font-black text-text-primary text-sm uppercase tracking-tight truncate">{item.name}</h4>
-                          <p className="font-black text-primary text-sm ml-2">₹{item.price}</p>
+                          <p className="font-black text-primary text-sm ml-2">â‚¹{item.price}</p>
                         </div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{item.category} • <Star className="w-2.5 h-2.5 fill-yellow-500 text-yellow-500 inline mb-0.5" /> {item.rating} {item.popular ? '• Popular' : ''}</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{item.category} â€¢ <Star className="w-2.5 h-2.5 fill-yellow-500 text-yellow-500 inline mb-0.5" /> {item.rating} {item.popular ? 'â€¢ Popular' : ''}</p>
                         <div className="flex items-center justify-between mt-3">
                           <span className={cn(
                             "px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest",
@@ -627,7 +629,7 @@ const Menu = () => {
 // Beautiful Glassmorphic Popup & Bottom-Sheet Add/Edit Category Modal
 const AddCategoryModal = ({ category, formData, setFormData, onClose, onSave }) => {
   const [errors, setErrors] = useState({});
-  const [previewUrl, setPreviewUrl] = useState(formData.image || '🍽️');
+  const [previewUrl, setPreviewUrl] = useState(formData.image || 'ðŸ½ï¸');
   const [emojiInput, setEmojiInput] = useState(formData.image.length <= 2 ? formData.image : '');
 
   const handleImageChange = (e) => {
@@ -715,10 +717,10 @@ const AddCategoryModal = ({ category, formData, setFormData, onClose, onSave }) 
                 ) : (
                   <span>{previewUrl}</span>
                 )}
-                {previewUrl && previewUrl !== '🍽️' && (
+                {previewUrl && previewUrl !== 'ðŸ½ï¸' && (
                   <button 
                     type="button"
-                    onClick={() => { setPreviewUrl('🍽️'); setFormData({ ...formData, image: '🍽️' }); setEmojiInput(''); }}
+                    onClick={() => { setPreviewUrl('ðŸ½ï¸'); setFormData({ ...formData, image: 'ðŸ½ï¸' }); setEmojiInput(''); }}
                     className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover/prev:opacity-100 transition-opacity flex items-center justify-center text-white text-[9px] font-black uppercase tracking-wider cursor-pointer"
                   >
                     Reset
@@ -766,7 +768,7 @@ const AddCategoryModal = ({ category, formData, setFormData, onClose, onSave }) 
                 <div className="border border-slate-100 rounded-2xl p-3 flex flex-col justify-between bg-surface/50">
                   <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Quick Icon Choice</span>
                   <div className="grid grid-cols-5 gap-1.5">
-                    {['🍳', '🍔', '🥤', '🍓', '🥗', '🍕', '🍰', '🍟', '🍜', '☕'].map(emoji => (
+                    {['ðŸ³', 'ðŸ”', 'ðŸ¥¤', 'ðŸ“', 'ðŸ¥—', 'ðŸ•', 'ðŸ°', 'ðŸŸ', 'ðŸœ', 'â˜•'].map(emoji => (
                       <button
                         key={emoji}
                         type="button"
@@ -809,6 +811,13 @@ const AddCategoryModal = ({ category, formData, setFormData, onClose, onSave }) 
 };
 
 const AddItemModal = ({ item, isViewOnly, onClose, onSave, categories }) => {
+  // Parse sizes/addons safely from item
+  const parseSafe = (val) => {
+    if (!val) return [];
+    if (Array.isArray(val)) return val;
+    try { return JSON.parse(val); } catch { return []; }
+  };
+
   const [formData, setFormData] = useState({
     name: item?.name || item?.item_name || '',
     category: item?.category || item?.category_name || categories[0]?.name || '',
@@ -818,8 +827,8 @@ const AddItemModal = ({ item, isViewOnly, onClose, onSave, categories }) => {
     image: item?.image || '',
     rating: item?.rating || 5,
     popular: !!item?.popular,
-    addons: item?.addons ? (typeof item.addons === 'string' ? JSON.parse(item.addons) : item.addons) : [],
-    sizes: item?.sizes ? (typeof item.sizes === 'string' ? JSON.parse(item.sizes) : item.sizes) : []
+    addons: parseSafe(item?.addons),
+    sizes: parseSafe(item?.sizes)
   });
   const [errors, setErrors] = useState({});
   const [previewUrl, setPreviewUrl] = useState(item?.image || '');
@@ -830,10 +839,38 @@ const AddItemModal = ({ item, isViewOnly, onClose, onSave, categories }) => {
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreviewUrl(reader.result);
-        setFormData({ ...formData, image: reader.result });
+        setFormData(prev => ({ ...prev, image: reader.result }));
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  // Sizes helpers
+  const addSizeRow = () => setFormData(prev => ({ ...prev, sizes: [...prev.sizes, { name: '', price: 0 }] }));
+  const updateSize = (idx, field, val) => setFormData(prev => ({ ...prev, sizes: prev.sizes.map((s, i) => i === idx ? { ...s, [field]: val } : s) }));
+  const removeSize = (idx) => setFormData(prev => ({ ...prev, sizes: prev.sizes.filter((_, i) => i !== idx) }));
+  const applyRegularLargePreset = () => {
+    setFormData(prev => ({ ...prev, sizes: [{ name: 'Regular', price: 0 }, { name: 'Large', price: 0 }] }));
+  };
+
+  // Addons helpers
+  const addModifierRow = () => setFormData(prev => ({ ...prev, addons: [...prev.addons, { name: '', price: 0 }] }));
+  const updateAddon = (idx, field, val) => setFormData(prev => ({ ...prev, addons: prev.addons.map((a, i) => i === idx ? { ...a, [field]: val } : a) }));
+  const removeAddon = (idx) => setFormData(prev => ({ ...prev, addons: prev.addons.filter((_, i) => i !== idx) }));
+
+  const QUICK_PRESETS = [
+    { label: 'ðŸ¥› Milk Options', items: [{ name: 'Almond Milk', price: 50 }, { name: 'Soy Milk', price: 50 }, { name: 'Oat Milk', price: 60 }] },
+    { label: 'ðŸ¬ Sugar Options', items: [{ name: 'Sugar Free', price: 0 }, { name: 'Half Sugar', price: 0 }, { name: 'Extra Sugar', price: 0 }] },
+    { label: 'ðŸ Extras', items: [{ name: 'Extra Cheese', price: 50 }, { name: 'Add Egg', price: 30 }, { name: 'Extra Toppings', price: 40 }] },
+    { label: 'ðŸª‘ Service Type', items: [{ name: 'Dine In', price: 0 }, { name: 'Takeaway', price: 0 }, { name: 'Delivery', price: 50 }] }
+  ];
+
+  const applyQuickPreset = (presetItems) => {
+    setFormData(prev => {
+      const existing = prev.addons.map(a => a.name.toLowerCase());
+      const newItems = presetItems.filter(pi => !existing.includes(pi.name.toLowerCase()));
+      return { ...prev, addons: [...prev.addons, ...newItems] };
+    });
   };
 
   const validate = () => {
@@ -852,265 +889,378 @@ const AddItemModal = ({ item, isViewOnly, onClose, onSave, categories }) => {
     }
   };
 
+  const isAvailable = formData.status === 'In Stock';
+
   return createPortal(
-    <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center">
       <div onClick={onClose} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
-      <div 
-        className="relative w-full sm:max-w-[650px] bg-surface rounded-[24px] shadow-2xl overflow-hidden border border-white/20 self-center animate-in fade-in slide-in-from-bottom-4 sm:zoom-in duration-300 flex flex-col max-h-[95vh] sm:max-h-[90vh]"
+      <div
+        className="relative w-full sm:max-w-[650px] bg-white rounded-t-[2rem] sm:rounded-[1.75rem] shadow-2xl border border-white/20 self-end sm:self-center flex flex-col max-h-[95vh]"
+        style={{ animation: 'slideUpModal 0.32s cubic-bezier(.4,1.4,.6,1) both' }}
       >
-        <div className="px-5 py-5 md:px-8 md:py-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/20 shrink-0">
-          <div className="flex items-center gap-3 md:gap-4">
-             <div className="w-10 h-10 md:w-12 md:h-12 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
-                <Plus className="w-4 h-4 md:w-5 md:h-5 text-primary md:stroke-[3]" />
-             </div>
-             <div>
-                <h3 className="text-lg md:text-xl font-black uppercase tracking-tight leading-none">
-                  {isViewOnly ? 'View' : (item ? 'Edit' : 'Add')} Menu Item
-                </h3>
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1.5 md:mt-1 leading-none">
-                  {isViewOnly ? 'Product details' : (item ? 'Modify existing entry' : 'Define new experience')}
-                </p>
-             </div>
+        {/* Header */}
+        <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-white shrink-0 rounded-t-[2rem] sm:rounded-t-[1.75rem]">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center shrink-0">
+              <Plus className="w-5 h-5 text-primary stroke-[3]" />
+            </div>
+            <div>
+              <h3 className="text-base font-black uppercase tracking-tight leading-none text-slate-900">
+                {isViewOnly ? 'View' : (item ? 'Edit' : 'Add')} Menu Item
+              </h3>
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1 leading-none">
+                {isViewOnly ? 'Product details' : (item ? 'Modify existing entry' : 'Define new experience')}
+              </p>
+            </div>
           </div>
-          <button onClick={onClose} className="p-2 md:p-2.5 hover:bg-surface rounded-xl border border-transparent hover:border-slate-100 shadow-sm transition-all"><X className="w-5 h-5 text-slate-400" /></button>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl transition-all cursor-pointer">
+            <X className="w-5 h-5 text-slate-400" />
+          </button>
         </div>
 
+        {/* Scrollable Form Body */}
         <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
-           <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6 md:space-y-8 scrollbar-hide">
-              <div className="flex flex-col sm:flex-row gap-6 md:gap-8">
-                 <div className="w-24 h-24 sm:w-36 sm:h-36 bg-slate-50 rounded-[1.5rem] sm:rounded-[2.5rem] border-2 sm:border-4 border-dashed border-slate-200 flex flex-col items-center justify-center gap-2 group cursor-pointer hover:border-primary shrink-0 overflow-hidden relative self-center transition-colors">
-                    <input 
-                      type="file" 
-                      accept="image/*"
-                      onChange={handleImageChange}
-                      className="absolute inset-0 opacity-0 cursor-pointer z-20 disabled:cursor-default"
+          <div className="flex-1 overflow-y-auto scrollbar-hide">
+
+            {/* â”€â”€ Row 1: Image + Title / Price / Category â”€â”€ */}
+            <div className="p-6 flex flex-col sm:flex-row gap-5">
+              {/* Dashed Upload Box */}
+              <div className="shrink-0 self-start">
+                <label className="w-28 h-28 rounded-2xl border-2 border-dashed border-slate-200 hover:border-primary flex flex-col items-center justify-center gap-1.5 cursor-pointer bg-slate-50 hover:bg-indigo-50/40 transition-colors relative overflow-hidden group block">
+                  <input type="file" accept="image/*" onChange={handleImageChange} className="absolute inset-0 opacity-0 cursor-pointer" disabled={isViewOnly} />
+                  {previewUrl && previewUrl.length > 2 ? (
+                    <img src={previewUrl} alt="Preview" className="absolute inset-0 w-full h-full object-cover" />
+                  ) : previewUrl ? (
+                    <span className="text-4xl">{previewUrl}</span>
+                  ) : (
+                    <>
+                      <Camera className="w-7 h-7 text-slate-300 group-hover:text-primary transition-colors" />
+                      <span className="text-[8px] font-black text-slate-300 group-hover:text-primary uppercase tracking-wider transition-colors text-center leading-tight px-1">Upload Image</span>
+                    </>
+                  )}
+                  {previewUrl && (
+                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <Camera className="w-5 h-5 text-white" />
+                    </div>
+                  )}
+                </label>
+              </div>
+
+              {/* Right: Title + Price + Category */}
+              <div className="flex-1 space-y-3.5">
+                <div>
+                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Product Title</label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="e.g. Classic Margherita"
+                    disabled={isViewOnly}
+                    className={cn(
+                      "w-full px-4 py-3 bg-slate-50 border rounded-xl text-sm font-semibold text-slate-800 placeholder:text-slate-300 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all disabled:opacity-60",
+                      errors.name ? 'border-rose-300 bg-rose-50/30' : 'border-slate-200'
+                    )}
+                  />
+                  {errors.name && <p className="text-[9px] text-rose-500 font-bold mt-1">{errors.name}</p>}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Base Price (â‚¹)</label>
+                    <input
+                      type="number"
+                      value={formData.price}
+                      onChange={e => setFormData(prev => ({ ...prev, price: e.target.value }))}
+                      placeholder="299"
                       disabled={isViewOnly}
+                      className={cn(
+                        "w-full px-4 py-3 bg-slate-50 border rounded-xl text-sm font-semibold text-slate-800 placeholder:text-slate-300 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all disabled:opacity-60",
+                        errors.price ? 'border-rose-300 bg-rose-50/30' : 'border-slate-200'
+                      )}
                     />
-                    {previewUrl ? (
-                      <img src={previewUrl} alt="Preview" className="absolute inset-0 w-full h-full object-cover z-10" />
-                    ) : (
-                      <>
-                        <Camera className="w-6 h-6 md:w-8 md:h-8 text-slate-300 group-hover:text-primary transition-colors" />
-                        <span className="text-[7px] md:text-[8px] font-black text-slate-300 uppercase tracking-[0.2em] group-hover:text-primary transition-colors">Upload Image</span>
-                      </>
-                    )}
-                    {previewUrl && (
-                      <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity z-15 flex items-center justify-center">
-                         <Camera className="w-6 h-6 text-white" />
-                      </div>
-                    )}
-                 </div>
-                 <div className="flex-1 space-y-5 md:space-y-6">
-                    <div className="space-y-1.5">
-                       <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Product Title</label>
-                       <input 
-                         type="text" 
-                         value={formData.name}
-                         onChange={(e) => setFormData({...formData, name: e.target.value})}
-                         placeholder="e.g. Classic Margherita" 
-                         className={cn(
-                           "w-full px-5 py-3.5 bg-slate-50 border rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none font-bold text-xs md:text-sm transition-all disabled:opacity-70 disabled:cursor-not-allowed",
-                           errors.name ? "border-rose-300 bg-rose-50/20" : "border-slate-100"
-                         )}
-                         disabled={isViewOnly}
-                       />
-                       {errors.name && <p className="text-[9px] font-bold text-primary ml-1 mt-1">{errors.name}</p>}
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                       <div className="space-y-1.5">
-                          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Price (₹)</label>
-                          <input 
-                            type="number" 
-                            value={formData.price}
-                            onChange={(e) => setFormData({...formData, price: e.target.value})}
-                            placeholder="299" 
-                            className={cn(
-                              "w-full px-5 py-3.5 bg-slate-50 border rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none font-bold text-xs md:text-sm transition-all disabled:opacity-70 disabled:cursor-not-allowed",
-                              errors.price ? "border-rose-300 bg-rose-50/20" : "border-slate-100"
-                            )}
-                            disabled={isViewOnly}
-                          />
-                          {errors.price && <p className="text-[9px] font-bold text-primary ml-1 mt-1">{errors.price}</p>}
-                       </div>
-                       <div className="space-y-1.5">
-                          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Category</label>
-                          <div className="relative">
-                            <select 
-                              value={formData.category}
-                              onChange={(e) => setFormData({...formData, category: e.target.value})}
-                              className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none font-bold text-xs md:text-sm appearance-none transition-all disabled:opacity-70 disabled:cursor-not-allowed"
-                              disabled={isViewOnly}
-                            >
-                               {categories.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
-                            </select>
-                            <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 rotate-90 pointer-events-none" />
-                          </div>
-                       </div>
-                    </div>
-                 </div>
-              </div>
-              <div className="space-y-1.5">
-                 <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Product Description</label>
-                 <textarea 
-                   value={formData.description}
-                   onChange={(e) => setFormData({...formData, description: e.target.value})}
-                   placeholder="Describe flavors and ingredients..." 
-                   rows="3" 
-                   className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none font-bold text-xs md:text-sm transition-all resize-y min-h-[100px] disabled:opacity-70 disabled:cursor-not-allowed"
-                   disabled={isViewOnly}
-                 />
-              </div>
-              {/* Premium Addons & Sizes Setup Panel */}
-              <div className="space-y-4 border-t border-slate-50 pt-4">
-                 <div className="flex items-center justify-between">
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Addons & Size Variants</span>
-                    {!isViewOnly && (
-                       <div className="flex gap-2">
-                          <button 
-                            type="button" 
-                            onClick={() => {
-                              const name = prompt("Enter Size Variant Name (e.g. Medium, Large):");
-                              const price = prompt("Enter Price for this size variant (₹):");
-                              if (name && price && !isNaN(price)) {
-                                setFormData(prev => ({
-                                  ...prev,
-                                  sizes: [...prev.sizes, { name, price: parseFloat(price) }]
-                                }));
-                              }
-                            }}
-                            className="px-2.5 py-1 bg-primary/5 hover:bg-primary/10 text-primary border border-primary/10 rounded-lg text-[8px] font-black uppercase tracking-wider cursor-pointer active:scale-95"
-                          >
-                             + Add Size
-                          </button>
-                          <button 
-                            type="button" 
-                            onClick={() => {
-                              const name = prompt("Enter Addon Name (e.g. Extra Cheese, Add Egg):");
-                              const price = prompt("Enter Price for this addon (₹):");
-                              if (name && price && !isNaN(price)) {
-                                setFormData(prev => ({
-                                  ...prev,
-                                  addons: [...prev.addons, { name, price: parseFloat(price) }]
-                                }));
-                              }
-                            }}
-                            className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-100 rounded-lg text-[8px] font-black uppercase tracking-wider cursor-pointer active:scale-95"
-                          >
-                             + Add Topping
-                          </button>
-                       </div>
-                    )}
-                 </div>
-
-                 {/* Render configured sizes & addons */}
-                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {/* Sizes List */}
-                    <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 space-y-2 min-h-[60px]">
-                       <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest block mb-1">Portions / Sizes</span>
-                       {formData.sizes.length === 0 ? (
-                          <span className="text-[8px] font-bold text-slate-300 uppercase tracking-wider block">No custom sizes</span>
-                       ) : (
-                          formData.sizes.map((s, idx) => (
-                             <div key={idx} className="flex justify-between items-center bg-white/70 p-1.5 px-2.5 rounded-xl border border-slate-100 shadow-sm">
-                                <span className="text-[9px] font-black text-slate-700 uppercase tracking-wider">{s.name} • ₹{s.price}</span>
-                                {!isViewOnly && (
-                                   <button 
-                                     type="button" 
-                                     onClick={() => setFormData(prev => ({ ...prev, sizes: prev.sizes.filter((_, i) => i !== idx) }))}
-                                     className="text-rose-400 hover:text-rose-600 text-[8px] font-black uppercase tracking-widest cursor-pointer"
-                                   >
-                                      Delete
-                                   </button>
-                                )}
-                             </div>
-                          ))
-                       )}
-                    </div>
-
-                    {/* Addons List */}
-                    <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 space-y-2 min-h-[60px]">
-                       <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest block mb-1">Toppings / Addons</span>
-                       {formData.addons.length === 0 ? (
-                          <span className="text-[8px] font-bold text-slate-300 uppercase tracking-wider block">No custom toppings</span>
-                       ) : (
-                          formData.addons.map((a, idx) => (
-                             <div key={idx} className="flex justify-between items-center bg-white/70 p-1.5 px-2.5 rounded-xl border border-slate-100 shadow-sm">
-                                <span className="text-[9px] font-black text-slate-700 uppercase tracking-wider">{a.name} • +₹{a.price}</span>
-                                {!isViewOnly && (
-                                   <button 
-                                     type="button" 
-                                     onClick={() => setFormData(prev => ({ ...prev, addons: prev.addons.filter((_, i) => i !== idx) }))}
-                                     className="text-rose-400 hover:text-rose-600 text-[8px] font-black uppercase tracking-widest cursor-pointer"
-                                   >
-                                      Delete
-                                   </button>
-                                )}
-                             </div>
-                          ))
-                       )}
-                    </div>
-                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                 <div className="space-y-1.5">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Rating (0-5)</label>
-                    <input 
-                      type="number" 
-                      min="0"
-                      max="5"
-                      step="0.1"
-                      value={formData.rating}
-                      onChange={(e) => setFormData({...formData, rating: e.target.value})}
-                      className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none font-bold text-sm transition-all disabled:opacity-70 disabled:cursor-not-allowed"
-                      disabled={isViewOnly}
-                    />
-                 </div>
-                 <div className="space-y-1.5">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Stock Status</label>
+                    {errors.price && <p className="text-[9px] text-rose-500 font-bold mt-1">{errors.price}</p>}
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Category</label>
                     <div className="relative">
-                      <select 
-                        value={formData.status}
-                        onChange={(e) => setFormData({...formData, status: e.target.value})}
-                        className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none font-bold text-sm appearance-none transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+                      <select
+                        value={formData.category}
+                        onChange={e => setFormData(prev => ({ ...prev, category: e.target.value }))}
                         disabled={isViewOnly}
+                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none transition-all disabled:opacity-60"
                       >
-                         <option value="In Stock">In Stock</option>
-                         <option value="Low Stock">Low Stock</option>
-                         <option value="Out of Stock">Out of Stock</option>
+                        {categories.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
                       </select>
-                      <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 rotate-90 pointer-events-none" />
+                      <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 rotate-90 pointer-events-none" />
                     </div>
-                 </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="h-px bg-slate-100 mx-6" />
+
+            {/* â”€â”€ Row 2: Description + Icon + Availability â”€â”€ */}
+            <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-5">
+              {/* Description */}
+              <div>
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Product Description</label>
+                <textarea
+                  value={formData.description}
+                  onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Describe flavors and ingredients..."
+                  rows={3}
+                  disabled={isViewOnly}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 placeholder:text-slate-300 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all resize-none disabled:opacity-60"
+                />
               </div>
 
-              <div className="flex items-center gap-3 pt-2">
-                 <label className="relative inline-flex items-center cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      checked={formData.popular}
-                      onChange={(e) => setFormData({...formData, popular: e.target.checked})}
-                      className="sr-only peer"
-                      disabled={isViewOnly}
-                    />
-                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-surface after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                 </label>
-                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Mark as Popular Item</span>
+              {/* Icon + Availability */}
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Product Icon / Emoji</label>
+                  <input
+                    type="text"
+                    value={formData.image && formData.image.length <= 4 ? formData.image : ''}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setFormData(prev => ({ ...prev, image: val }));
+                      if (val && val.length <= 4) setPreviewUrl(val);
+                    }}
+                    placeholder="e.g. ðŸ” or ðŸŒ®"
+                    disabled={isViewOnly}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 placeholder:text-slate-300 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all disabled:opacity-60"
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2">Availability Status</label>
+                  <button
+                    type="button"
+                    disabled={isViewOnly}
+                    onClick={() => setFormData(prev => ({ ...prev, status: prev.status === 'In Stock' ? 'Out of Stock' : 'In Stock' }))}
+                    className={cn(
+                      "flex items-center gap-3 px-4 py-2.5 rounded-xl border-2 font-black text-[10px] uppercase tracking-widest transition-all disabled:opacity-60",
+                      isAvailable
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                        : 'bg-slate-50 border-slate-200 text-slate-400'
+                    )}
+                  >
+                    <span className={cn(
+                      "relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors duration-200",
+                      isAvailable ? 'bg-emerald-500' : 'bg-slate-300'
+                    )}>
+                      <span className={cn(
+                        "absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform duration-200",
+                        isAvailable ? 'translate-x-4' : 'translate-x-0.5'
+                      )} />
+                    </span>
+                    {isAvailable ? 'Available / In Stock' : 'Out of Stock'}
+                  </button>
+                </div>
               </div>
-           </div>
+            </div>
 
-           <div className="px-6 py-4 md:px-8 md:py-6 border-t border-slate-50 flex flex-row gap-3 md:gap-4 bg-surface shrink-0 relative z-20">
-              <button type="button" onClick={onClose} className="flex-1 py-3.5 border-2 border-slate-100 rounded-2xl font-black uppercase tracking-widest text-[9px] md:text-[10px] text-slate-400 hover:bg-slate-50 transition-all text-center">
-                {isViewOnly ? 'Close' : 'Cancel'}
-              </button>
-              {!isViewOnly && (
-                <button type="submit" className="flex-1 btn-primary py-3.5 rounded-full font-black uppercase tracking-widest shadow-xl shadow-primary/20 text-[9px] md:text-[10px] active:scale-95 transition-all text-center">
-                  {item ? 'Update Entry' : 'Deploy Item'}
-                </button>
+            {/* Divider */}
+            <div className="h-px bg-slate-100 mx-6" />
+
+            {/* â”€â”€ Row 3: Portion Sizes & Variants â”€â”€ */}
+            <div className="p-6 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Portion Sizes &amp; Variants</p>
+                  <p className="text-[8px] text-slate-300 font-bold mt-0.5">Specify different sizes and their pricing</p>
+                </div>
+                {!isViewOnly && (
+                  <div className="flex gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={applyRegularLargePreset}
+                      className="flex items-center gap-1 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-primary border border-indigo-100 rounded-lg text-[8px] font-black uppercase tracking-wider cursor-pointer active:scale-95 transition-all"
+                    >
+                      <Sparkles className="w-3 h-3" /> Regular &amp; Large Preset
+                    </button>
+                    <button
+                      type="button"
+                      onClick={addSizeRow}
+                      className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white rounded-lg text-[8px] font-black uppercase tracking-wider cursor-pointer active:scale-95 transition-all shadow-md shadow-primary/25"
+                    >
+                      <Plus className="w-3 h-3 stroke-[3]" /> Add Size Row
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Size rows */}
+              {formData.sizes.length === 0 ? (
+                <div className="py-4 text-center">
+                  <p className="text-[9px] font-bold text-slate-300 uppercase tracking-wider">No portion sizes defined. Item will use the base price directly.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {formData.sizes.map((s, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={s.name}
+                        onChange={e => updateSize(idx, 'name', e.target.value)}
+                        placeholder="e.g. Regular, Large"
+                        disabled={isViewOnly}
+                        className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 placeholder:text-slate-300 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                      />
+                      <div className="relative flex items-center">
+                        <span className="absolute left-3 text-xs font-black text-slate-400">â‚¹</span>
+                        <input
+                          type="number"
+                          value={s.price}
+                          onChange={e => updateSize(idx, 'price', e.target.value)}
+                          disabled={isViewOnly}
+                          className="w-24 pl-7 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                        />
+                      </div>
+                      {!isViewOnly && (
+                        <button
+                          type="button"
+                          onClick={() => removeSize(idx)}
+                          className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
               )}
-           </div>
+            </div>
+
+            {/* Divider */}
+            <div className="h-px bg-slate-100 mx-6" />
+
+            {/* â”€â”€ Row 4: Custom Modifiers & Add-ons â”€â”€ */}
+            <div className="p-6 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Custom Modifiers &amp; Add-ons</p>
+                  <p className="text-[8px] text-slate-300 font-bold mt-0.5">Define customization options for this item</p>
+                </div>
+                {!isViewOnly && (
+                  <button
+                    type="button"
+                    onClick={addModifierRow}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white rounded-lg text-[8px] font-black uppercase tracking-wider cursor-pointer active:scale-95 transition-all shadow-md shadow-primary/25 shrink-0"
+                  >
+                    <Plus className="w-3 h-3 stroke-[3]" /> Add Modifier Row
+                  </button>
+                )}
+              </div>
+
+              {/* Quick Presets */}
+              {!isViewOnly && (
+                <div>
+                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-2">Quick Presets:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {QUICK_PRESETS.map(preset => (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => applyQuickPreset(preset.items)}
+                        className="px-3 py-1.5 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-primary/30 text-slate-500 hover:text-primary rounded-lg text-[8px] font-black uppercase tracking-wider cursor-pointer active:scale-95 transition-all"
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Addon rows */}
+              {formData.addons.length === 0 ? (
+                <div className="py-4 text-center">
+                  <p className="text-[9px] font-bold text-slate-300 uppercase tracking-wider">No custom modifiers defined. Beverage will use the defaults.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {formData.addons.map((a, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={a.name}
+                        onChange={e => updateAddon(idx, 'name', e.target.value)}
+                        placeholder="e.g. Soy Milk, Extra shot"
+                        disabled={isViewOnly}
+                        className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 placeholder:text-slate-300 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                      />
+                      <div className="relative flex items-center">
+                        <span className="absolute left-3 text-xs font-black text-slate-400">â‚¹</span>
+                        <input
+                          type="number"
+                          value={a.price}
+                          onChange={e => updateAddon(idx, 'price', e.target.value)}
+                          disabled={isViewOnly}
+                          className="w-24 pl-7 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                        />
+                      </div>
+                      {!isViewOnly && (
+                        <button
+                          type="button"
+                          onClick={() => removeAddon(idx)}
+                          className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* â”€â”€ Popular Toggle â”€â”€ */}
+            <div className="px-6 pb-5 flex items-center gap-3">
+              <button
+                type="button"
+                disabled={isViewOnly}
+                onClick={() => setFormData(prev => ({ ...prev, popular: !prev.popular }))}
+                className={cn(
+                  "relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors duration-200 disabled:opacity-60",
+                  formData.popular ? 'bg-primary' : 'bg-slate-200'
+                )}
+              >
+                <span className={cn(
+                  "absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform duration-200",
+                  formData.popular ? 'translate-x-4' : 'translate-x-0.5'
+                )} />
+              </button>
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Mark as Popular Item</span>
+            </div>
+          </div>
+
+          {/* â”€â”€ Footer Actions â”€â”€ */}
+          <div className="px-6 py-4 border-t border-slate-100 bg-white flex gap-3 shrink-0">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-3.5 border-2 border-slate-200 rounded-2xl font-black uppercase tracking-widest text-[9px] text-slate-400 hover:bg-slate-50 transition-all cursor-pointer active:scale-95"
+            >
+              {isViewOnly ? 'Close' : 'Cancel'}
+            </button>
+            {!isViewOnly && (
+              <button
+                type="submit"
+                className="flex-1 btn-primary py-3.5 rounded-2xl font-black uppercase tracking-widest text-[9px] shadow-xl shadow-primary/20 transition-all cursor-pointer active:scale-95"
+              >
+                {item ? 'Update Entry' : 'Deploy Item'}
+              </button>
+            )}
+          </div>
         </form>
       </div>
+
+      <style>{`
+        @keyframes slideUpModal {
+          from { opacity: 0; transform: translateY(40px) scale(0.97); }
+          to   { opacity: 1; transform: translateY(0)  scale(1); }
+        }
+      `}</style>
     </div>,
     document.body
   );
