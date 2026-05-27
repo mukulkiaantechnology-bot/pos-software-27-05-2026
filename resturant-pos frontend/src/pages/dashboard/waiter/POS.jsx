@@ -32,8 +32,19 @@ import { useHospitality } from "../../../context/HospitalityContext";
 import { useOrders } from "../../../context/OrdersContext";
 import printContent from '../../../utils/printUtil';
 
-const getCategoryStyles = (categoryName) => {
+const getCategoryStyles = (categoryName, dbColor = null) => {
   const name = categoryName.trim().toLowerCase();
+  if (dbColor) {
+    const lowerColor = dbColor.toLowerCase();
+    if (lowerColor === '#fff5d7') return { bg: 'bg-[#FFF5D7]', text: 'text-[#9A7D0A]', border: 'border-[#FFEBB3]' };
+    if (lowerColor === '#e7f4ff') return { bg: 'bg-[#E7F4FF]', text: 'text-[#2978B5]', border: 'border-[#CDE5FF]' };
+    if (lowerColor === '#eafbf3') return { bg: 'bg-[#EAFBF3]', text: 'text-[#1E7F55]', border: 'border-[#CFF5E3]' };
+    if (lowerColor === '#fcf1ea') return { bg: 'bg-[#FCF1EA]', text: 'text-[#B85721]', border: 'border-[#FFDFCC]' };
+    if (lowerColor === '#fff0f5') return { bg: 'bg-[#FFF0F5]', text: 'text-[#B84C75]', border: 'border-[#FFE0EB]' };
+    if (lowerColor === '#f3eeff') return { bg: 'bg-[#F3EEFF]', text: 'text-[#6052D9]', border: 'border-[#E5DBFF]' };
+    if (lowerColor === '#fff8e7') return { bg: 'bg-[#FFF8E7]', text: 'text-[#9B7F1C]', border: 'border-[#FFEFCC]' };
+    if (lowerColor === '#e5dbff') return { bg: 'bg-[#E5DBFF]', text: 'text-[#6052D9]', border: 'border-[#DED2FF]' };
+  }
   if (name.includes('hot drink') || name.includes('tea') || name.includes('coffee')) {
     return { bg: 'bg-[#FFF5D7]', text: 'text-[#9A7D0A]', border: 'border-[#FFEBB3]' };
   }
@@ -104,6 +115,7 @@ const POS = () => {
   const [activeCategory, setActiveCategory] = useState('All Items');
   const [viewMode, setViewMode] = useState('categories');
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeQuickFilter, setActiveQuickFilter] = useState('all');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [toast, setToast] = useState(null);
   const [editingNote, setEditingNote] = useState(null);
@@ -326,7 +338,27 @@ const POS = () => {
     const matchesCategory = isAll || itemCategory === activeCategory?.trim().toLowerCase();
     const itemName = item.item_name || item.name;
     const matchesSearch = itemName?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
+    
+    // Quick Filters logic
+    let matchesQuickFilter = true;
+    if (activeQuickFilter === 'veg') {
+      matchesQuickFilter = item.isVeg === 1;
+    } else if (activeQuickFilter === 'vegan') {
+      matchesQuickFilter = item.isVegan === 1;
+    } else if (activeQuickFilter === 'gf') {
+      matchesQuickFilter = item.isGlutenFree === 1;
+    } else if (activeQuickFilter === 'beverage') {
+      const catLower = itemCategory.toLowerCase();
+      matchesQuickFilter = catLower.includes('beverage') || catLower.includes('tea') || 
+                           catLower.includes('milkshake') || catLower.includes('smoothie') || 
+                           catLower.includes('coffee') || catLower.includes('drink');
+    } else if (activeQuickFilter === 'breakfast') {
+      const catLower = itemCategory.toLowerCase();
+      matchesQuickFilter = catLower.includes('breakfast') || catLower.includes('wrap') || 
+                           catLower.includes('classic');
+    }
+
+    return matchesCategory && matchesSearch && matchesQuickFilter;
   });
 
   return (
@@ -396,7 +428,7 @@ const POS = () => {
 
               {/* DYNAMIC CATEGORIES */}
               {categories.map(cat => {
-                const styles = getCategoryStyles(cat.category_name);
+                const styles = getCategoryStyles(cat.category_name, cat.color);
                 return (
                   <button
                     key={cat.id}
@@ -483,6 +515,36 @@ const POS = () => {
                 />
               </div>
             </div>
+            
+            {/* Quick Filter Buttons Bar */}
+            <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1.5 shrink-0 px-1 scrollbar-hide">
+              {[
+                { id: 'all', label: 'All Items', icon: '🍽️' },
+                { id: 'veg', label: 'Vegetarian', icon: '🌱' },
+                { id: 'vegan', label: 'Vegan', icon: '🍃' },
+                { id: 'gf', label: 'Gluten-Free', icon: '🌾' },
+                { id: 'beverage', label: 'Beverages', icon: '☕' },
+                { id: 'breakfast', label: 'Breakfast', icon: '🍳' }
+              ].map(filter => {
+                const isActive = activeQuickFilter === filter.id;
+                return (
+                  <button
+                    key={filter.id}
+                    type="button"
+                    onClick={() => setActiveQuickFilter(filter.id)}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer active:scale-95 shadow-sm shrink-0",
+                      isActive
+                        ? "bg-slate-900 text-white border-slate-900 font-extrabold"
+                        : "bg-white border-black/[0.03] text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                    )}
+                  >
+                    <span>{filter.icon}</span>
+                    <span>{filter.label}</span>
+                  </button>
+                );
+              })}
+            </div>
 
             {/* Horizontal Sub-Navigation Categories Bar */}
             <div className="flex items-center gap-2 mb-5 overflow-x-auto pb-2 shrink-0 px-1 scrollbar-hide">
@@ -510,7 +572,7 @@ const POS = () => {
 
               {/* DYNAMIC CATEGORIES BUTTONS */}
               {categories.map(cat => {
-                const styles = getCategoryStyles(cat.category_name);
+                const styles = getCategoryStyles(cat.category_name, cat.color);
                 const isActive = activeCategory === cat.category_name;
                 return (
                   <button
@@ -573,9 +635,30 @@ const POS = () => {
                     {/* Typography info (Left Aligned) */}
                     <div className="relative z-10 flex flex-col flex-1 justify-between">
                       <div className="text-left">
-                        <h4 className="font-extrabold text-slate-800 text-[13px] md:text-sm leading-tight uppercase tracking-tight break-words line-clamp-1">
-                          {item.item_name || item.name || "Unnamed Item"}
-                        </h4>
+                        <div className="flex items-center justify-between gap-2">
+                          <h4 className="font-extrabold text-slate-800 text-[13px] md:text-sm leading-tight uppercase tracking-tight break-words line-clamp-1">
+                            {item.item_name || item.name || "Unnamed Item"}
+                          </h4>
+                          
+                          {/* Dietary Badges */}
+                          <div className="flex items-center gap-1.5 shrink-0 select-none">
+                            {item.isVeg === 1 && (
+                              <span className="w-3.5 h-3.5 rounded border border-emerald-500/35 flex items-center justify-center bg-white" title="Vegetarian">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                              </span>
+                            )}
+                            {item.isVegan === 1 && (
+                              <span className="text-[8px] font-black text-teal-600 bg-teal-50 border border-teal-100/60 px-1 py-0.2 rounded" title="Vegan">
+                                VG
+                              </span>
+                            )}
+                            {item.isGlutenFree === 1 && (
+                              <span className="text-[8px] font-black text-amber-600 bg-amber-50 border border-amber-100/60 px-1 py-0.2 rounded" title="Gluten Free Option">
+                                GF
+                              </span>
+                            )}
+                          </div>
+                        </div>
                         <p className="text-slate-400 text-[10px] font-medium leading-relaxed line-clamp-2 mt-1">
                           {item.description || "Prepared fresh with premium ingredients."}
                         </p>
@@ -721,9 +804,30 @@ const POS = () => {
                   >
                     {/* Top Row: Name and Total Price */}
                     <div className="flex items-center justify-between">
-                       <h5 className="font-extrabold text-slate-800 text-xs uppercase tracking-tight truncate max-w-[180px]">
-                         {baseName}
-                       </h5>
+                       <div className="flex items-center gap-1.5 truncate max-w-[180px]">
+                          <h5 className="font-extrabold text-slate-800 text-xs uppercase tracking-tight truncate">
+                            {baseName}
+                          </h5>
+                          
+                          {/* Dietary Badges */}
+                          <div className="flex items-center gap-1 shrink-0 select-none scale-[0.8] origin-left">
+                            {item.isVeg === 1 && (
+                              <span className="w-3.5 h-3.5 rounded border border-emerald-500/35 flex items-center justify-center bg-white" title="Vegetarian">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                              </span>
+                            )}
+                            {item.isVegan === 1 && (
+                              <span className="text-[8px] font-black text-teal-600 bg-teal-50 border border-teal-100/60 px-1 py-0.2 rounded" title="Vegan">
+                                VG
+                              </span>
+                            )}
+                            {item.isGlutenFree === 1 && (
+                              <span className="text-[8px] font-black text-amber-600 bg-amber-50 border border-amber-100/60 px-1 py-0.2 rounded" title="Gluten Free Option">
+                                GF
+                              </span>
+                            )}
+                          </div>
+                       </div>
                        <span className="font-black text-slate-800 text-xs">
                          ₹{item.price * item.qty}
                        </span>
