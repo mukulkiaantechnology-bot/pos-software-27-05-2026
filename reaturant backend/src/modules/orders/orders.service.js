@@ -62,9 +62,10 @@ class OrdersService {
 
       // 2. Create Order Items
       for (const item of items) {
+        const addonsStr = item.addons ? (typeof item.addons === 'string' ? item.addons : JSON.stringify(item.addons)) : null;
         await connection.execute(
-          'INSERT INTO order_items (order_id, menu_item_id, quantity, unit_price, total_price) VALUES (?, ?, ?, ?, ?)',
-          [orderId, item.menu_item_id, item.quantity, item.unit_price, item.total_price]
+          'INSERT INTO order_items (order_id, menu_item_id, quantity, unit_price, total_price, addons) VALUES (?, ?, ?, ?, ?, ?)',
+          [orderId, item.menu_item_id, item.quantity, item.unit_price, item.total_price, addonsStr]
         );
       }
 

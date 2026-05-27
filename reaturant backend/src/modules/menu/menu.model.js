@@ -61,9 +61,12 @@ class MenuModel extends BaseModel {
     }
 
     // 2. Insert Item
+    const addonsStr = data.addons ? (typeof data.addons === 'string' ? data.addons : JSON.stringify(data.addons)) : null;
+    const sizesStr = data.sizes ? (typeof data.sizes === 'string' ? data.sizes : JSON.stringify(data.sizes)) : null;
+
     const sql = `
-      INSERT INTO menu_items (item_name, category_id, price, image, description, availability, rating, popular) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO menu_items (item_name, category_id, price, image, description, availability, rating, popular, addons, sizes) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     const params = [
       item_name || name || 'New Item',
@@ -73,7 +76,9 @@ class MenuModel extends BaseModel {
       description || '',
       available || 'In Stock',
       data.rating || 0,
-      data.popular ? 1 : 0
+      data.popular ? 1 : 0,
+      addonsStr,
+      sizesStr
     ];
 
     const [insertResult] = await pool.execute(sql, params);
@@ -81,7 +86,7 @@ class MenuModel extends BaseModel {
   }
 
   async update(id, data) {
-    const { name, item_name, category, category_id, price, image, description, available } = data;
+    const { name, item_name, category, category_id, price, image, description, available, addons, sizes } = data;
     
     const updateData = {};
     
@@ -93,6 +98,13 @@ class MenuModel extends BaseModel {
     if (available !== undefined) updateData.availability = available;
     if (data.rating !== undefined) updateData.rating = data.rating;
     if (data.popular !== undefined) updateData.popular = data.popular ? 1 : 0;
+
+    if (addons !== undefined) {
+      updateData.addons = addons ? (typeof addons === 'string' ? addons : JSON.stringify(addons)) : null;
+    }
+    if (sizes !== undefined) {
+      updateData.sizes = sizes ? (typeof sizes === 'string' ? sizes : JSON.stringify(sizes)) : null;
+    }
 
     // Resolve Category if name is provided
     if (category && !category_id) {
@@ -129,6 +141,45 @@ class MenuModel extends BaseModel {
   async getCategories() {
     const [rows] = await pool.execute('SELECT * FROM menu_categories WHERE deletedAt IS NULL');
     return rows;
+  }
+
+  async createCategory(data) {
+    const { name, category_name, icon } = data;
+    const finalName = category_name || name;
+    const sql = 'INSERT INTO menu_categories (category_name, icon) VALUES (?, ?)';
+    const [result] = await pool.execute(sql, [finalName, icon || '🍽️']);
+    return result.insertId;
+  }
+
+  async updateCategory(id, data) {
+    const { name, category_name, icon } = data;
+    const finalName = category_name || name;
+    
+    const updateFields = [];
+    const params = [];
+    
+    if (finalName !== undefined) {
+      updateFields.push('category_name = ?');
+      params.push(finalName);
+    }
+    
+    if (icon !== undefined) {
+      updateFields.push('icon = ?');
+      params.push(icon);
+    }
+    
+    if (updateFields.length === 0) return 0;
+    
+    params.push(id);
+    const sql = `UPDATE menu_categories SET ${updateFields.join(', ')} WHERE id = ?`;
+    const [result] = await pool.execute(sql, params);
+    return result.affectedRows;
+  }
+
+  async deleteCategory(id) {
+    const sql = 'UPDATE menu_categories SET deletedAt = CURRENT_TIMESTAMP WHERE id = ?';
+    const [result] = await pool.execute(sql, [id]);
+    return result.affectedRows;
   }
 }
 

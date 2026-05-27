@@ -117,9 +117,9 @@ const ThemeHandler = () => {
   useEffect(() => {
     // Force Gila House Tropical Palette
     const theme = { 
-      primary: '#EF8E4B', 
-      dark: '#F2994A', 
-      light: '#FFF5EE' 
+      primary: '#6C63FF', 
+      dark: '#5A52E6', 
+      light: '#F3EEFF' 
     };
     
     document.documentElement.style.setProperty('--color-primary', theme.primary);

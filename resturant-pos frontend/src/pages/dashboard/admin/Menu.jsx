@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   Plus, 
@@ -20,14 +20,17 @@ import {
   AlertCircle,
   CookingPot,
   ArrowUpRight,
-  Eye
+  Eye,
+  Save,
+  UploadCloud
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from "../../../utils/cn";
 import { getImageUrl } from "../../../utils/imageUtils";
 import { useMenu } from "../../../context/MenuContext";
 
 const Menu = () => {
-  const { items, categories: backendCategories, addItem, updateItem, deleteItem } = useMenu();
+  const { items, categories: backendCategories, addItem, updateItem, deleteItem, addCategory, updateCategory, deleteCategory } = useMenu();
   const [activeCategory, setActiveCategory] = useState('All Items');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
@@ -37,9 +40,46 @@ const Menu = () => {
   const [isViewOnly, setIsViewOnly] = useState(false);
   const [toast, setToast] = useState(null);
 
+  // Responsive Category Management Local States
+  const [localCategories, setLocalCategories] = useState([
+    { id: 1, category_name: 'Breakfast', icon: '🍳', itemCount: 5 },
+    { id: 2, category_name: 'Burgers', icon: '🍔', itemCount: 8 },
+    { id: 3, category_name: 'Drinks', icon: '🥤', itemCount: 12 },
+    { id: 4, category_name: 'Smoothies', icon: '🍓', itemCount: 4 },
+    { id: 5, category_name: 'Salads', icon: '🥗', itemCount: 6 }
+  ]);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [categoryFormData, setCategoryFormData] = useState({
+    name: '',
+    image: '🍽️'
+  });
+  const [inlineEditingId, setInlineEditingId] = useState(null);
+  const [inlineEditValue, setInlineEditValue] = useState('');
+
+  // Dynamically sync and merge backend categories to local categories
+  useEffect(() => {
+    if (backendCategories && backendCategories.length > 0) {
+      const dbCategories = backendCategories.map(cat => {
+        const itemCount = items.filter(item => {
+          const catName = item.category_name || item.category || '';
+          return catName.toLowerCase() === cat.category_name.toLowerCase();
+        }).length;
+        return {
+          id: cat.id,
+          category_name: cat.category_name,
+          icon: cat.icon || '🍽️',
+          itemCount
+        };
+      });
+
+      setLocalCategories(dbCategories);
+    }
+  }, [backendCategories, items]);
+
   const categories = [
     { name: 'All Items', icon: Layers },
-    ...backendCategories.map(cat => ({
+    ...localCategories.map(cat => ({
       name: cat.category_name,
       icon: Tag,
       id: cat.id
@@ -50,6 +90,67 @@ const Menu = () => {
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleSaveCategory = (data) => {
+    const payload = {
+      category_name: data.name,
+      icon: data.image || '🍽️'
+    };
+
+    if (editingCategory) {
+      updateCategory(editingCategory.id, payload).then(res => {
+        if (res.success) {
+          showToast('Category updated successfully');
+          setShowCategoryModal(false);
+          setEditingCategory(null);
+        } else {
+          showToast(res.message || 'Failed to update category', 'error');
+        }
+      });
+    } else {
+      addCategory(payload).then(res => {
+        if (res.success) {
+          showToast('New category created');
+          setShowCategoryModal(false);
+          setEditingCategory(null);
+        } else {
+          showToast(res.message || 'Failed to create category', 'error');
+        }
+      });
+    }
+  };
+
+  const handleDeleteCategoryClick = (id) => {
+    if (confirm('Are you sure you want to delete this category? All items inside will remain in general.')) {
+      deleteCategory(id).then(res => {
+        if (res.success) {
+          showToast('Category removed successfully', 'error');
+        } else {
+          showToast(res.message || 'Failed to delete category', 'error');
+        }
+      });
+    }
+  };
+
+  const handleInlineSave = (id, newName) => {
+    if (!newName.trim()) {
+      showToast('Category name cannot be empty', 'error');
+      return;
+    }
+    const cat = localCategories.find(c => c.id === id);
+    const payload = {
+      category_name: newName,
+      icon: cat ? cat.icon : '🍽️'
+    };
+    updateCategory(id, payload).then(res => {
+      if (res.success) {
+        showToast('Category name saved');
+        setInlineEditingId(null);
+      } else {
+        showToast(res.message || 'Failed to save category name', 'error');
+      }
+    });
   };
 
   const handleSaveItem = (itemData) => {
@@ -141,10 +242,131 @@ const Menu = () => {
         </div>
         <button 
           onClick={() => { setEditingItem(null); setIsViewOnly(false); setShowAddModal(true); }}
-          className="btn-primary flex items-center justify-center gap-2 py-3 lg:py-2.5 px-6 shadow-xl shadow-primary/20 text-[10px] lg:text-sm uppercase tracking-widest font-black"
+          className="btn-primary flex items-center justify-center gap-2 py-3 lg:py-2.5 px-6 shadow-xl shadow-primary/20 text-[10px] lg:text-sm uppercase tracking-widest font-black transition-all hover:scale-[1.02] active:scale-95"
         >
           <Plus className="w-4 h-4 stroke-[3]" /> Add Item
         </button>
+      </div>
+
+      {/* Premium Glassmorphic Category Management Section */}
+      <div className="card p-5 bg-surface/30 backdrop-blur-md border border-slate-100/50 rounded-3xl shadow-sm mb-4 relative overflow-hidden shrink-0">
+        <div className="absolute top-[-30%] right-[-10%] w-60 h-60 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+        
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+          <div>
+            <h3 className="text-base font-black text-text-primary uppercase tracking-wider leading-none">Category Management</h3>
+            <p className="text-text-secondary mt-1 text-[10px] lg:text-xs font-medium">Create and manage food categories</p>
+          </div>
+          <button 
+            onClick={() => { setEditingCategory(null); setCategoryFormData({ name: '', image: '🍽️' }); setShowCategoryModal(true); }}
+            className="btn-primary flex items-center justify-center gap-2 py-2.5 px-5 shadow-xl shadow-primary/20 text-[10px] uppercase tracking-widest font-black transition-all hover:scale-[1.02] active:scale-95 cursor-pointer w-full sm:w-auto"
+          >
+            <Plus className="w-4 h-4 stroke-[3]" /> Add Category
+          </button>
+        </div>
+
+        {/* Categories Grid (2-column adaptive layout on tablet, 3-column on desktop) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {localCategories.map(cat => {
+            const isInlineEditing = inlineEditingId === cat.id;
+            return (
+              <div 
+                key={cat.id}
+                className="flex flex-col sm:flex-row items-center sm:items-stretch gap-4 p-4 rounded-2xl bg-surface/60 backdrop-blur-sm border border-slate-100/80 shadow-sm hover:shadow-xl hover:border-primary/10 transition-all duration-300 hover:-translate-y-1 relative group"
+              >
+                {/* Image / Icon container */}
+                <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center text-3xl shrink-0 overflow-hidden shadow-inner border border-slate-100 relative bg-surface">
+                  {cat.icon && cat.icon.length > 2 ? (
+                    <img src={cat.icon} alt={cat.category_name} className="w-full h-full object-cover" />
+                  ) : (
+                    <span>{cat.icon || '🍽️'}</span>
+                  )}
+                </div>
+
+                {/* Details */}
+                <div className="flex-1 min-w-0 flex flex-col justify-center text-center sm:text-left w-full">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 justify-center sm:justify-start">
+                    {isInlineEditing ? (
+                      <div className="flex items-center gap-1 w-full max-w-[150px] mx-auto sm:mx-0">
+                        <input 
+                          type="text" 
+                          value={inlineEditValue} 
+                          onChange={(e) => setInlineEditValue(e.target.value)}
+                          className="px-2.5 py-1 bg-surface border border-primary/30 rounded-lg outline-none font-bold text-xs focus:ring-2 focus:ring-primary/10 w-full"
+                          autoFocus
+                        />
+                      </div>
+                    ) : (
+                      <h5 className="font-black text-slate-800 text-sm uppercase tracking-wider truncate">{cat.category_name}</h5>
+                    )}
+                  </div>
+                  <p className="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-wider">{cat.itemCount} Items</p>
+                </div>
+
+                {/* Action Icons with Hover transitions */}
+                <div className="flex sm:flex-col justify-center sm:justify-end items-center gap-2 mt-3 sm:mt-0 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-all duration-200">
+                  {isInlineEditing ? (
+                    <>
+                      <button 
+                        onClick={() => handleInlineSave(cat.id, inlineEditValue)}
+                        title="Save Changes"
+                        className="p-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl shadow-md transition-all hover:scale-105 active:scale-95 cursor-pointer relative group/save"
+                      >
+                        <Save className="w-3.5 h-3.5" />
+                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-slate-900 text-white text-[8px] font-black uppercase tracking-widest rounded opacity-0 group-hover/save:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-30 shadow-md">Save Category</span>
+                      </button>
+                      <button 
+                        onClick={() => setInlineEditingId(null)}
+                        title="Cancel"
+                        className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-400 rounded-xl border border-slate-200 transition-all hover:scale-105 active:scale-95 cursor-pointer relative group/cancel"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-slate-900 text-white text-[8px] font-black uppercase tracking-widest rounded opacity-0 group-hover/cancel:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-30 shadow-md">Cancel</span>
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button 
+                        onClick={() => {
+                          setEditingCategory(cat);
+                          setCategoryFormData({
+                            name: cat.category_name,
+                            image: cat.icon
+                          });
+                          setShowCategoryModal(true);
+                        }}
+                        title="Edit Category"
+                        className="p-2 bg-surface hover:bg-primary-light text-slate-400 hover:text-primary rounded-xl border border-slate-100 hover:border-primary/20 shadow-sm transition-all hover:scale-105 active:scale-95 cursor-pointer relative group/btn"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-slate-900 text-white text-[8px] font-black uppercase tracking-widest rounded opacity-0 group-hover/btn:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-30 shadow-md">Edit Category</span>
+                      </button>
+                      <button 
+                        onClick={() => {
+                          setInlineEditingId(cat.id);
+                          setInlineEditValue(cat.category_name);
+                        }}
+                        title="Inline Rename"
+                        className="p-2 bg-surface hover:bg-indigo-50 text-slate-400 hover:text-primary rounded-xl border border-slate-100 hover:border-primary/20 shadow-sm transition-all hover:scale-105 active:scale-95 cursor-pointer relative group/inline"
+                      >
+                        <Save className="w-3.5 h-3.5" />
+                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-slate-900 text-white text-[8px] font-black uppercase tracking-widest rounded opacity-0 group-hover/inline:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-30 shadow-md">Inline Rename</span>
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteCategoryClick(cat.id)}
+                        title="Delete Category"
+                        className="p-2 bg-surface hover:bg-rose-50 text-rose-400 hover:text-rose-600 rounded-xl border border-slate-100 hover:border-rose-100 shadow-sm transition-all hover:scale-105 active:scale-95 cursor-pointer relative group/del"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-slate-900 text-white text-[8px] font-black uppercase tracking-widest rounded opacity-0 group-hover/del:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-30 shadow-md">Delete Category</span>
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <div className="flex items-center gap-2 lg:gap-3 overflow-x-auto pb-2 lg:pb-4 scrollbar-hide shrink-0 -mx-1 px-1">
@@ -370,6 +592,15 @@ const Menu = () => {
             categories={categories.filter(c => c.name !== 'All Items')}
           />
         )}
+        {showCategoryModal && (
+          <AddCategoryModal 
+            category={editingCategory}
+            formData={categoryFormData}
+            setFormData={setCategoryFormData}
+            onClose={() => { setShowCategoryModal(false); setEditingCategory(null); }}
+            onSave={handleSaveCategory}
+          />
+        )}
         {showDeleteConfirm && createPortal(
         <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
            <div onClick={() => setShowDeleteConfirm(null)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
@@ -393,6 +624,190 @@ const Menu = () => {
   );
 };
 
+// Beautiful Glassmorphic Popup & Bottom-Sheet Add/Edit Category Modal
+const AddCategoryModal = ({ category, formData, setFormData, onClose, onSave }) => {
+  const [errors, setErrors] = useState({});
+  const [previewUrl, setPreviewUrl] = useState(formData.image || '🍽️');
+  const [emojiInput, setEmojiInput] = useState(formData.image.length <= 2 ? formData.image : '');
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewUrl(reader.result);
+        setFormData({ ...formData, image: reader.result });
+        setEmojiInput('');
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleEmojiChange = (emoji) => {
+    setEmojiInput(emoji);
+    setPreviewUrl(emoji);
+    setFormData({ ...formData, image: emoji });
+  };
+
+  const validate = () => {
+    const newErrors = {};
+    if (!formData.name.trim()) newErrors.name = 'Category name is required';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (validate()) {
+      onSave(formData);
+    }
+  };
+
+  return createPortal(
+    <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 overflow-hidden">
+      {/* Glassmorphic Backdrop overlay */}
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose} 
+        className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-10" 
+      />
+      
+      {/* Modal Container */}
+      <motion.div 
+        initial={{ y: 200, opacity: 0 }}
+        animate={{ y: 0, opacity: 1, transition: { type: 'spring', damping: 25, stiffness: 350 } }}
+        exit={{ y: 200, opacity: 0 }}
+        className={cn(
+          "relative w-full sm:max-w-lg bg-surface/90 backdrop-blur-xl rounded-t-[2.5rem] sm:rounded-[2.5rem] shadow-2xl border border-white/20 flex flex-col max-h-[92vh] sm:max-h-[85vh] z-20",
+          "fixed bottom-0 left-0 right-0 sm:relative sm:bottom-auto sm:left-auto sm:right-auto sm:self-center"
+        )}
+      >
+        {/* Header */}
+        <div className="px-6 py-5 border-b border-slate-50 flex justify-between items-center bg-slate-50/20 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
+              <Plus className="w-5 h-5 text-primary stroke-[3]" />
+            </div>
+            <div>
+              <h3 className="text-lg font-black uppercase tracking-tight leading-none text-text-primary">
+                {category ? 'Edit' : 'Add'} Category
+              </h3>
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1.5 leading-none">
+                {category ? 'Modify existing food group' : 'Define a new food category'}
+              </p>
+            </div>
+          </div>
+          <button type="button" onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl border border-transparent shadow-sm transition-all cursor-pointer">
+            <X className="w-5 h-5 text-slate-400" />
+          </button>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide">
+            {/* Category Icon / Image Preview Circle at Top */}
+            <div className="flex flex-col items-center text-center space-y-3">
+              <div className="w-24 h-24 bg-gradient-to-br from-primary/10 to-primary-hover/5 rounded-3xl flex items-center justify-center text-5xl shadow-lg border-2 border-white relative overflow-hidden group/prev">
+                {previewUrl.length > 2 ? (
+                  <img src={previewUrl} alt="Category Icon Preview" className="absolute inset-0 w-full h-full object-cover" />
+                ) : (
+                  <span>{previewUrl}</span>
+                )}
+                {previewUrl && previewUrl !== '🍽️' && (
+                  <button 
+                    type="button"
+                    onClick={() => { setPreviewUrl('🍽️'); setFormData({ ...formData, image: '🍽️' }); setEmojiInput(''); }}
+                    className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover/prev:opacity-100 transition-opacity flex items-center justify-center text-white text-[9px] font-black uppercase tracking-wider cursor-pointer"
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+              <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Icon / Image Preview</p>
+            </div>
+
+            {/* Input Field: Category Name */}
+            <div className="space-y-1.5 relative group">
+              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Category Name</label>
+              <input 
+                type="text" 
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Enter category name" 
+                className={cn(
+                  "w-full px-5 py-3.5 bg-slate-50 border rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none font-bold text-xs transition-all",
+                  errors.name ? "border-rose-300 bg-rose-50/20" : "border-slate-100 text-text-primary"
+                )}
+                required
+              />
+              {errors.name && <p className="text-[9px] font-bold text-primary ml-1 mt-1">{errors.name}</p>}
+            </div>
+
+            {/* Input Field: Category Image Upload & Emoji Picker */}
+            <div className="space-y-3">
+              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1 block">Category Graphic Setup</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Photo Drag & Drop Zone */}
+                <div className="border-2 border-dashed border-slate-200 hover:border-primary/50 rounded-2xl p-4 flex flex-col items-center justify-center gap-1.5 text-center relative transition-colors bg-slate-50/50 cursor-pointer min-h-[110px] group/upload">
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="absolute inset-0 opacity-0 cursor-pointer"
+                  />
+                  <UploadCloud className="w-6 h-6 text-slate-300 group-hover/upload:text-primary transition-colors" />
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Upload Photo</span>
+                  <span className="text-[7px] text-slate-300">Drag or drop files here</span>
+                </div>
+
+                {/* Emoji selection grid for instant branding */}
+                <div className="border border-slate-100 rounded-2xl p-3 flex flex-col justify-between bg-surface/50">
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Quick Icon Choice</span>
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {['🍳', '🍔', '🥤', '🍓', '🥗', '🍕', '🍰', '🍟', '🍜', '☕'].map(emoji => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        onClick={() => handleEmojiChange(emoji)}
+                        className={cn(
+                          "w-8 h-8 rounded-lg flex items-center justify-center text-lg hover:bg-primary-light transition-all cursor-pointer active:scale-90 border",
+                          emojiInput === emoji ? "border-primary bg-indigo-50/50 scale-105" : "border-slate-50 bg-slate-50/20"
+                        )}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Actions Area */}
+          <div className="px-6 py-5 border-t border-slate-100 flex flex-row gap-3 bg-surface shrink-0">
+            <button 
+              type="button" 
+              onClick={onClose} 
+              className="flex-1 py-3.5 border-2 border-slate-100 rounded-2xl font-black uppercase tracking-widest text-[9px] text-slate-400 hover:bg-slate-50 transition-all text-center cursor-pointer active:scale-95"
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              className="flex-1 btn-primary py-3.5 rounded-full font-black uppercase tracking-widest shadow-xl shadow-primary/20 text-[9px] active:scale-95 transition-all text-center cursor-pointer flex items-center justify-center gap-2"
+            >
+              <Save className="w-3.5 h-3.5" /> Save Category
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </div>,
+    document.body
+  );
+};
+
 const AddItemModal = ({ item, isViewOnly, onClose, onSave, categories }) => {
   const [formData, setFormData] = useState({
     name: item?.name || item?.item_name || '',
@@ -402,7 +817,9 @@ const AddItemModal = ({ item, isViewOnly, onClose, onSave, categories }) => {
     status: item?.status || 'In Stock',
     image: item?.image || '',
     rating: item?.rating || 5,
-    popular: !!item?.popular
+    popular: !!item?.popular,
+    addons: item?.addons ? (typeof item.addons === 'string' ? JSON.parse(item.addons) : item.addons) : [],
+    sizes: item?.sizes ? (typeof item.sizes === 'string' ? JSON.parse(item.sizes) : item.sizes) : []
   });
   const [errors, setErrors] = useState({});
   const [previewUrl, setPreviewUrl] = useState(item?.image || '');
@@ -439,7 +856,7 @@ const AddItemModal = ({ item, isViewOnly, onClose, onSave, categories }) => {
     <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
       <div onClick={onClose} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
       <div 
-        className="relative w-full sm:max-w-[500px] bg-surface rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl overflow-hidden border border-white/20 self-center animate-in fade-in slide-in-from-bottom-4 sm:zoom-in duration-300 flex flex-col max-h-[95vh] sm:max-h-[90vh]"
+        className="relative w-full sm:max-w-[650px] bg-surface rounded-[24px] shadow-2xl overflow-hidden border border-white/20 self-center animate-in fade-in slide-in-from-bottom-4 sm:zoom-in duration-300 flex flex-col max-h-[95vh] sm:max-h-[90vh]"
       >
         <div className="px-5 py-5 md:px-8 md:py-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/20 shrink-0">
           <div className="flex items-center gap-3 md:gap-4">
@@ -542,6 +959,97 @@ const AddItemModal = ({ item, isViewOnly, onClose, onSave, categories }) => {
                    className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none font-bold text-xs md:text-sm transition-all resize-y min-h-[100px] disabled:opacity-70 disabled:cursor-not-allowed"
                    disabled={isViewOnly}
                  />
+              </div>
+              {/* Premium Addons & Sizes Setup Panel */}
+              <div className="space-y-4 border-t border-slate-50 pt-4">
+                 <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Addons & Size Variants</span>
+                    {!isViewOnly && (
+                       <div className="flex gap-2">
+                          <button 
+                            type="button" 
+                            onClick={() => {
+                              const name = prompt("Enter Size Variant Name (e.g. Medium, Large):");
+                              const price = prompt("Enter Price for this size variant (₹):");
+                              if (name && price && !isNaN(price)) {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  sizes: [...prev.sizes, { name, price: parseFloat(price) }]
+                                }));
+                              }
+                            }}
+                            className="px-2.5 py-1 bg-primary/5 hover:bg-primary/10 text-primary border border-primary/10 rounded-lg text-[8px] font-black uppercase tracking-wider cursor-pointer active:scale-95"
+                          >
+                             + Add Size
+                          </button>
+                          <button 
+                            type="button" 
+                            onClick={() => {
+                              const name = prompt("Enter Addon Name (e.g. Extra Cheese, Add Egg):");
+                              const price = prompt("Enter Price for this addon (₹):");
+                              if (name && price && !isNaN(price)) {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  addons: [...prev.addons, { name, price: parseFloat(price) }]
+                                }));
+                              }
+                            }}
+                            className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-100 rounded-lg text-[8px] font-black uppercase tracking-wider cursor-pointer active:scale-95"
+                          >
+                             + Add Topping
+                          </button>
+                       </div>
+                    )}
+                 </div>
+
+                 {/* Render configured sizes & addons */}
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Sizes List */}
+                    <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 space-y-2 min-h-[60px]">
+                       <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest block mb-1">Portions / Sizes</span>
+                       {formData.sizes.length === 0 ? (
+                          <span className="text-[8px] font-bold text-slate-300 uppercase tracking-wider block">No custom sizes</span>
+                       ) : (
+                          formData.sizes.map((s, idx) => (
+                             <div key={idx} className="flex justify-between items-center bg-white/70 p-1.5 px-2.5 rounded-xl border border-slate-100 shadow-sm">
+                                <span className="text-[9px] font-black text-slate-700 uppercase tracking-wider">{s.name} • ₹{s.price}</span>
+                                {!isViewOnly && (
+                                   <button 
+                                     type="button" 
+                                     onClick={() => setFormData(prev => ({ ...prev, sizes: prev.sizes.filter((_, i) => i !== idx) }))}
+                                     className="text-rose-400 hover:text-rose-600 text-[8px] font-black uppercase tracking-widest cursor-pointer"
+                                   >
+                                      Delete
+                                   </button>
+                                )}
+                             </div>
+                          ))
+                       )}
+                    </div>
+
+                    {/* Addons List */}
+                    <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 space-y-2 min-h-[60px]">
+                       <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest block mb-1">Toppings / Addons</span>
+                       {formData.addons.length === 0 ? (
+                          <span className="text-[8px] font-bold text-slate-300 uppercase tracking-wider block">No custom toppings</span>
+                       ) : (
+                          formData.addons.map((a, idx) => (
+                             <div key={idx} className="flex justify-between items-center bg-white/70 p-1.5 px-2.5 rounded-xl border border-slate-100 shadow-sm">
+                                <span className="text-[9px] font-black text-slate-700 uppercase tracking-wider">{a.name} • +₹{a.price}</span>
+                                {!isViewOnly && (
+                                   <button 
+                                     type="button" 
+                                     onClick={() => setFormData(prev => ({ ...prev, addons: prev.addons.filter((_, i) => i !== idx) }))}
+                                     className="text-rose-400 hover:text-rose-600 text-[8px] font-black uppercase tracking-widest cursor-pointer"
+                                   >
+                                      Delete
+                                   </button>
+                                )}
+                             </div>
+                          ))
+                       )}
+                    </div>
+                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

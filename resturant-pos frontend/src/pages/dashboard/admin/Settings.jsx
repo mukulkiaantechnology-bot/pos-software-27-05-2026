@@ -151,11 +151,11 @@ const Settings = () => {
 
   const applyTheme = (colorId) => {
     const themes = {
-      orange: { primary: '#EF8E4B', dark: '#F2994A', light: '#FFF5EE' },
-      indigo: { primary: '#EF8E4B', dark: '#F2994A', light: '#FFF5EE' },
-      rose: { primary: '#EF8E4B', dark: '#F2994A', light: '#FFF5EE' },
-      emerald: { primary: '#EF8E4B', dark: '#F2994A', light: '#FFF5EE' },
-      purple: { primary: '#EF8E4B', dark: '#F2994A', light: '#FFF5EE' }
+      orange: { primary: '#6C63FF', dark: '#5A52E6', light: '#F3EEFF' },
+      indigo: { primary: '#6C63FF', dark: '#5A52E6', light: '#F3EEFF' },
+      rose: { primary: '#FF8BA7', dark: '#FA7C9D', light: '#FFF0F5' },
+      emerald: { primary: '#4EAD7C', dark: '#3D9A6B', light: '#EAFBF3' },
+      purple: { primary: '#6C63FF', dark: '#5A52E6', light: '#F3EEFF' }
     };
 
     const theme = themes[colorId] || themes.orange;

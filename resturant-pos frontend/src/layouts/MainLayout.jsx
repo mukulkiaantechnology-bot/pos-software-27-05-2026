@@ -159,10 +159,10 @@ const MainLayout = ({ children }) => {
               end={item.path.includes('/dashboard') || item.path === '/customer/home'}
               onClick={() => setIsMobileMenuOpen(false)}
               className={({ isActive }) => cn(
-                "group relative flex items-center gap-3 px-3 py-2.5 rounded-xl",
+                "group relative flex items-center gap-3 px-3.5 py-3 rounded-[14px] transition-all duration-200",
                 isActive
-                  ? "bg-primary text-white shadow-xl shadow-primary/25 scale-[1.02]"
-                  : "text-text-primary hover:bg-white/40 hover:text-primary"
+                  ? "bg-primary text-white shadow-[0_10px_25px_rgba(108,99,255,0.25)] scale-[1.02]"
+                  : "text-slate-500 hover:bg-primary-light hover:text-primary"
               )}
             >
               <item.icon className={cn("w-5 h-5 shrink-0 transition-transform group-hover:scale-110", !isCollapsed && "stroke-[2]")} />
@@ -187,7 +187,7 @@ const MainLayout = ({ children }) => {
 
           <button
             onClick={() => { logout(); navigate('/login'); }}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-text-secondary hover:bg-primary/5 hover:text-primary group"
+            className="w-full flex items-center gap-3 px-3.5 py-3 rounded-[14px] text-slate-500 hover:bg-[#FFF0F5] hover:text-[#FF8BA7] transition-all group"
           >
             <LogOut className="w-5 h-5 shrink-0" />
             {!isCollapsed && <span className="font-bold text-xs">Logout</span>}
@@ -216,9 +216,9 @@ const MainLayout = ({ children }) => {
         "flex-1 flex flex-col relative bg-background min-w-0"
       )}>
         {/* Premium SaaS Background Blobs */}
-        <div className="absolute top-[-10%] right-[-5%] w-[40rem] h-[40rem] bg-primary/[0.08] rounded-full blur-[100px] pointer-events-none" />
-        <div className="absolute bottom-[-10%] left-[-5%] w-[35rem] h-[35rem] bg-mint-dark/[0.15] rounded-full blur-[100px] pointer-events-none" />
-        <div className="absolute top-[20%] left-[10%] w-[30rem] h-[30rem] bg-primary/[0.04] rounded-full blur-[80px] pointer-events-none" />
+        <div className="absolute top-[-10%] right-[-5%] w-[40rem] h-[40rem] bg-primary/[0.05] rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute bottom-[-10%] left-[-5%] w-[35rem] h-[35rem] bg-[#EAFBF3]/[0.4] rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute top-[20%] left-[10%] w-[30rem] h-[30rem] bg-[#FFF0F5]/[0.4] rounded-full blur-[80px] pointer-events-none" />
         {/* Header */}
         <header className={cn(
           "h-14 bg-surface/80 backdrop-blur-md border-b border-black/5 flex items-center justify-between px-3 md:px-4 shrink-0 z-[200] sticky top-0 w-full",
@@ -250,9 +250,9 @@ const MainLayout = ({ children }) => {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search anything..."
                 className={cn(
-                  "w-full pl-10 pr-4 py-2.5 border-2 rounded-xl lg:rounded-2xl outline-none text-xs font-bold relative z-10 transition-all",
+                  "w-full pl-10 pr-4 py-2.5 border-2 rounded-[18px] outline-none text-xs font-bold relative z-10 transition-all",
                    isSearchFocused
-                    ? "border-primary ring-4 ring-primary/10 shadow-lg shadow-primary/5 bg-surface"
+                    ? "border-primary ring-4 ring-primary/5 shadow-lg shadow-primary/5 bg-surface"
                     : "border-black/5 hover:border-primary/20 bg-surface/50"
                 )}
               />

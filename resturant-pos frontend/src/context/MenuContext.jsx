@@ -102,8 +102,41 @@ export const MenuProvider = ({ children }) => {
     }
   };
 
+  const addCategory = async (newCategory) => {
+    try {
+      const response = await api.post('/menu/categories', newCategory);
+      await fetchItems();
+      return { success: true, data: response.data.data };
+    } catch (error) {
+      console.error('Error adding category:', error);
+      return { success: false, message: error.response?.data?.message || 'Failed to add category' };
+    }
+  };
+
+  const updateCategory = async (id, data) => {
+    try {
+      await api.patch(`/menu/categories/${id}`, data);
+      await fetchItems();
+      return { success: true };
+    } catch (error) {
+      console.error('Error updating category:', error);
+      return { success: false, message: error.response?.data?.message || 'Failed to update category' };
+    }
+  };
+
+  const deleteCategory = async (id) => {
+    try {
+      await api.delete(`/menu/categories/${id}`);
+      await fetchItems();
+      return { success: true };
+    } catch (error) {
+      console.error('Error deleting category:', error);
+      return { success: false, message: error.response?.data?.message || 'Failed to delete category' };
+    }
+  };
+
   return (
-    <MenuContext.Provider value={{ items, categories, categoriesList, addItem, updateItem, deleteItem, loading, refreshMenu: fetchItems }}>
+    <MenuContext.Provider value={{ items, categories, categoriesList, addItem, updateItem, deleteItem, addCategory, updateCategory, deleteCategory, loading, refreshMenu: fetchItems }}>
       {children}
     </MenuContext.Provider>
   );

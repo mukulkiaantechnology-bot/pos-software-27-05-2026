@@ -13,6 +13,7 @@ import {
   Clock,
   MoreVertical,
   X,
+  ChevronLeft,
   ChevronRight,
   Receipt,
   Users,
@@ -31,9 +32,57 @@ import { useHospitality } from "../../../context/HospitalityContext";
 import { useOrders } from "../../../context/OrdersContext";
 import printContent from '../../../utils/printUtil';
 
+const getCategoryStyles = (categoryName) => {
+  const name = categoryName.trim().toLowerCase();
+  if (name.includes('hot drink') || name.includes('tea') || name.includes('coffee')) {
+    return { bg: 'bg-[#FFF5D7]', text: 'text-[#9A7D0A]', border: 'border-[#FFEBB3]' };
+  }
+  if (name.includes('cold drink') || name.includes('juice') || name.includes('beverage') || name.includes('soda') || name.includes('drink')) {
+    return { bg: 'bg-[#E7F4FF]', text: 'text-[#2978B5]', border: 'border-[#CDE5FF]' };
+  }
+  if (name.includes('soup') || name.includes('bowl')) {
+    return { bg: 'bg-[#EAFBF3]', text: 'text-[#1E7F55]', border: 'border-[#CFF5E3]' };
+  }
+  if (name.includes('roll') || name.includes('wrap') || name.includes('sandwich')) {
+    return { bg: 'bg-[#FCF1EA]', text: 'text-[#B85721]', border: 'border-[#FFDFCC]' };
+  }
+  if (name.includes('bakery') || name.includes('cake') || name.includes('dessert') || name.includes('sweet') || name.includes('tooth')) {
+    return { bg: 'bg-[#FFF0F5]', text: 'text-[#B84C75]', border: 'border-[#FFE0EB]' };
+  }
+  if (name.includes('fish') || name.includes('chip') || name.includes('sea')) {
+    return { bg: 'bg-[#EAFDFC]', text: 'text-[#228B8F]', border: 'border-[#CDF0EF]' };
+  }
+  if (name.includes('pizza')) {
+    return { bg: 'bg-[#FFF0F5]', text: 'text-[#B84C75]', border: 'border-[#FFE0EB]' };
+  }
+  if (name.includes('wine') || name.includes('beer') || name.includes('alcohol')) {
+    return { bg: 'bg-[#F3EEFF]', text: 'text-[#6052D9]', border: 'border-[#E5DBFF]' };
+  }
+  if (name.includes('vodka') || name.includes('bar')) {
+    return { bg: 'bg-[#F3EEFF]', text: 'text-[#6052D9]', border: 'border-[#E5DBFF]' };
+  }
+  if (name.includes('salad') || name.includes('veg')) {
+    return { bg: 'bg-[#EAFBF3]', text: 'text-[#1E7F55]', border: 'border-[#CFF5E3]' };
+  }
+  
+  // Custom hash fallback based on category name character codes to give unique repeating soft-pastel colors!
+  const colors = [
+    { bg: 'bg-[#FFF5D7]', text: 'text-[#9A7D0A]', border: 'border-[#FFEBB3]' },
+    { bg: 'bg-[#E7F4FF]', text: 'text-[#2978B5]', border: 'border-[#CDE5FF]' },
+    { bg: 'bg-[#EAFBF3]', text: 'text-[#1E7F55]', border: 'border-[#CFF5E3]' },
+    { bg: 'bg-[#FCF1EA]', text: 'text-[#B85721]', border: 'border-[#FFDFCC]' },
+    { bg: 'bg-[#F3EEFF]', text: 'text-[#6052D9]', border: 'border-[#E5DBFF]' },
+    { bg: 'bg-[#FFF8E7]', text: 'text-[#9B7F1C]', border: 'border-[#FFEFCC]' },
+    { bg: 'bg-[#EAFDFC]', text: 'text-[#228B8F]', border: 'border-[#CDF0EF]' }
+  ];
+  let sum = 0;
+  for (let i = 0; i < name.length; i++) sum += name.charCodeAt(i);
+  return colors[sum % colors.length];
+};
+
 const POS = () => {
   const { user } = useAuth();
-  const { items, categoriesList, loading: menuLoading } = useMenu();
+  const { items, categories, categoriesList, loading: menuLoading } = useMenu();
   const { rooms, reservations, addToFolio } = useHospitality();
   const { orders, addOrder } = useOrders();
 
@@ -53,6 +102,7 @@ const POS = () => {
   }, [cart]);
 
   const [activeCategory, setActiveCategory] = useState('All Items');
+  const [viewMode, setViewMode] = useState('categories');
   const [searchQuery, setSearchQuery] = useState('');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [toast, setToast] = useState(null);
@@ -62,10 +112,17 @@ const POS = () => {
   const [serviceChargePercent, setServiceChargePercent] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('Cash');
-  const [selectedItemForSize, setSelectedItemForSize] = useState(null);
+  const [selectedItemForAddons, setSelectedItemForAddons] = useState(null);
   const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
   const [selectedGuestId, setSelectedGuestId] = useState('');
   const [orderForReceipt, setOrderForReceipt] = useState(null);
+
+  // Auto switch view mode when searching
+  React.useEffect(() => {
+    if (searchQuery.trim().length > 0) {
+      setViewMode('items');
+    }
+  }, [searchQuery]);
 
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
   const discountAmount = Math.round(subtotal * (discount / 100));
@@ -100,10 +157,13 @@ const POS = () => {
     status: o.order_status
   })).slice(0, 5);
 
-  const addToCart = (item, selectedSize = null) => {
-    // If item has sizes and none is selected, open size selection modal
-    if (item.sizes && !selectedSize) {
-      setSelectedItemForSize(item);
+  const addToCart = (item, selectedSize = null, selectedAddons = []) => {
+    const parsedSizes = item.sizes ? (typeof item.sizes === 'string' ? JSON.parse(item.sizes) : item.sizes) : [];
+    const parsedAddons = item.addons ? (typeof item.addons === 'string' ? JSON.parse(item.addons) : item.addons) : [];
+
+    // If item has portions or addons, and we haven't selected them yet, open selector
+    if ((parsedSizes.length > 0 || parsedAddons.length > 0) && !selectedSize) {
+      setSelectedItemForAddons(item);
       return;
     }
 
@@ -119,7 +179,7 @@ const POS = () => {
       return [...prev, { ...item, cartId, name: itemName, price: itemPrice, qty: 1, note: '' }];
     });
     
-    if (selectedItemForSize) setSelectedItemForSize(null);
+    if (selectedItemForAddons) setSelectedItemForAddons(null);
   };
 
   const removeFromCart = (cartId) => {
@@ -288,96 +348,259 @@ const POS = () => {
           </div>
         </div>
 
-        <div className="flex gap-2 overflow-x-auto pb-2 lg:pb-3 scrollbar-hide shrink-0 px-1 -mx-4 md:mx-0 px-4 md:px-0">
-          {categoriesList.map(cat => (
-            <button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
-              className={cn(
-                "px-4 lg:px-5 py-2 lg:py-2.5 rounded-lg lg:rounded-xl text-[9px] lg:text-[10px] font-bold uppercase tracking-[0.15em] whitespace-nowrap border-2 transition-all active:scale-95",
-                activeCategory === cat 
-                  ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" 
-                  : "bg-surface text-text-secondary border-black/5 hover:border-primary/20 hover:bg-primary-light"
-              )}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
+        {viewMode === 'categories' ? (
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3 shrink-0">
+              <div>
+                <h3 className="text-base font-black text-text-primary uppercase tracking-wider leading-none">Menu Categories</h3>
+                <p className="text-text-secondary mt-1.5 text-[10px] lg:text-xs font-medium">Select a category to view items</p>
+              </div>
+            </div>
 
-        {/* Dynamic Menu Grid */}
-        <div className="flex-1 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 lg:gap-6 items-start pr-1 pb-32 lg:pb-12 scrollbar-hide">
-          {filteredItems.length > 0 ? (
-            filteredItems.map(item => (
-              <div 
-                key={item.id} 
-                onClick={() => addToCart(item)}
-                className="card group cursor-pointer border-2 border-transparent hover:border-primary/20 p-3 lg:p-5 flex flex-col relative overflow-hidden bg-gradient-to-br from-surface to-slate-50/30 min-h-[320px] lg:min-h-[380px] h-full transition-all hover:shadow-xl hover:-translate-y-1 active:scale-95"
+            <div className="flex-1 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4 pb-24 lg:pb-12 scrollbar-hide pr-1">
+              {/* ALL ITEMS CARD */}
+              <button
+                onClick={() => {
+                  setActiveCategory('All Items');
+                  setViewMode('items');
+                }}
+                className="flex flex-col items-center justify-center p-6 rounded-[24px] border border-primary/20 bg-primary/[0.04] shadow-[0_10px_30px_rgba(108,99,255,0.03)] hover:shadow-[0_15px_30px_rgba(108,99,255,0.08)] hover:-translate-y-1.5 duration-300 transition-all active:scale-95 cursor-pointer text-center aspect-[1.1] min-h-[140px] group"
               >
-                {/* Image Section */}
-                <div className="relative -mx-3 -mt-3 lg:-mx-5 lg:-mt-5 mb-4 aspect-square overflow-hidden bg-surface border-b border-slate-50 group-hover:border-primary/10 transition-colors">
-                    {getImageUrl(item.image).length > 2 ? (
-                      <img 
-                        src={getImageUrl(item.image)} 
-                        alt={item.item_name || item.name} 
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-4xl lg:text-5xl bg-slate-50 text-slate-200">
-                         {getImageUrl(item.image)}
-                      </div>
+                <div className="w-16 h-16 rounded-full flex items-center justify-center text-4xl mb-3 shrink-0 bg-white/70 shadow-sm text-primary group-hover:scale-105 transition-transform duration-300">
+                   🍽️
+                </div>
+                <span className="text-[10px] lg:text-xs font-black uppercase tracking-wider leading-tight text-primary">
+                   ALL ITEMS
+                </span>
+              </button>
+
+              {/* DYNAMIC CATEGORIES */}
+              {categories.map(cat => {
+                const styles = getCategoryStyles(cat.category_name);
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => {
+                      setActiveCategory(cat.category_name);
+                      setViewMode('items');
+                    }}
+                    className={cn(
+                      "flex flex-col items-center justify-center p-6 rounded-[24px] border shadow-[0_10px_30px_rgba(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgba(0,0,0,0.05)] hover:-translate-y-1.5 duration-300 transition-all active:scale-95 cursor-pointer text-center aspect-[1.1] min-h-[140px] group",
+                      styles.bg,
+                      styles.border
                     )}
-                    <div className="absolute top-3 left-3 lg:top-4 lg:left-4">
-                       <span className="badge bg-surface/90 backdrop-blur-md text-slate-400 border-none shadow-sm text-[7px] lg:text-[8px] py-1 px-2 font-black uppercase tracking-widest">
-                          {item.category_name || item.category}
+                  >
+                    <div className="w-16 h-16 rounded-full flex items-center justify-center text-4xl mb-3 shrink-0 bg-white/70 shadow-sm group-hover:scale-105 transition-transform duration-300">
+                       {cat.icon && cat.icon.length > 2 ? (
+                         <img src={cat.icon} alt={cat.category_name} className="w-10 h-10 object-cover rounded-lg" />
+                       ) : (
+                         <span>{cat.icon || '🍽️'}</span>
+                       )}
+                    </div>
+                    <span className={cn("text-[10px] lg:text-xs font-black uppercase tracking-wider leading-tight", styles.text)}>
+                       {cat.category_name}
+                    </span>
+                  </button>
+                );
+              })}
+
+              {/* EXTRAS MANUAL CARD */}
+              <button 
+                onClick={() => showToastMessage('Extras coming soon', 'success')}
+                className="flex flex-col items-center justify-center p-6 rounded-[24px] border border-[#E5DBFF] bg-[#F3EEFF] shadow-[0_10px_30px_rgba(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgba(0,0,0,0.05)] hover:-translate-y-1.5 duration-300 transition-all active:scale-95 cursor-pointer text-center aspect-[1.1] min-h-[140px] group"
+              >
+                <div className="w-16 h-16 rounded-full flex items-center justify-center text-4xl mb-3 shrink-0 bg-white/70 shadow-sm text-[#6052D9] group-hover:scale-105 transition-transform duration-300">
+                   <Plus className="w-7 h-7 stroke-[3]" />
+                </div>
+                <span className="text-[10px] lg:text-xs font-black uppercase tracking-wider leading-tight text-[#6052D9]">
+                   EXTRAS
+                </span>
+              </button>
+
+              {/* DISCOUNTS CARD */}
+              <button 
+                onClick={() => showToastMessage('Discounts coming soon', 'success')}
+                className="flex flex-col items-center justify-center p-6 rounded-[24px] border border-[#CFF5E3] bg-[#EAFBF3] shadow-[0_10px_30px_rgba(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgba(0,0,0,0.05)] hover:-translate-y-1.5 duration-300 transition-all active:scale-95 cursor-pointer text-center aspect-[1.1] min-h-[140px] group"
+              >
+                <div className="w-16 h-16 rounded-full flex items-center justify-center text-4xl mb-3 shrink-0 bg-white/70 shadow-sm text-[#1E7F55] group-hover:scale-105 transition-transform duration-300">
+                   <Tag className="w-7 h-7" />
+                </div>
+                <span className="text-[10px] lg:text-xs font-black uppercase tracking-wider leading-tight text-[#1E7F55]">
+                   DISCOUNTS
+                </span>
+              </button>
+
+              {/* CUSTOM AMOUNT CARD */}
+              <button 
+                onClick={() => showToastMessage('Custom amount coming soon', 'success')}
+                className="flex flex-col items-center justify-center p-6 rounded-[24px] border border-[#CDE5FF] bg-[#E7F4FF] shadow-[0_10px_30px_rgba(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgba(0,0,0,0.05)] hover:-translate-y-1.5 duration-300 transition-all active:scale-95 cursor-pointer text-center aspect-[1.1] min-h-[140px] group"
+              >
+                <div className="w-16 h-16 rounded-full flex items-center justify-center text-4xl mb-3 shrink-0 bg-white/70 shadow-sm text-[#2978B5] group-hover:scale-105 transition-transform duration-300">
+                   <CreditCard className="w-7 h-7" />
+                </div>
+                <span className="text-[10px] lg:text-xs font-black uppercase tracking-wider leading-tight text-[#2978B5]">
+                   CUSTOM AMOUNT
+                </span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Header Title Section */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 shrink-0 px-1">
+              <div>
+                <h3 className="text-lg font-black text-text-primary uppercase tracking-wider leading-none">{activeCategory}</h3>
+                <p className="text-text-secondary mt-1.5 text-[9px] lg:text-[10px] font-bold uppercase tracking-widest leading-none">Browsing items in {activeCategory}</p>
+              </div>
+              <div className="relative w-full sm:w-[220px] group">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-primary" />
+                <input 
+                  type="text" 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search products..." 
+                  className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-100 rounded-full focus:ring-4 focus:ring-primary/5 focus:border-primary/30 outline-none shadow-sm font-bold text-[10px] uppercase tracking-widest placeholder:text-slate-300"
+                />
+              </div>
+            </div>
+
+            {/* Horizontal Sub-Navigation Categories Bar */}
+            <div className="flex items-center gap-2 mb-5 overflow-x-auto pb-2 shrink-0 px-1 scrollbar-hide">
+              <button 
+                onClick={() => { setViewMode('categories'); setSearchQuery(''); }}
+                className="w-10 h-10 bg-white border border-black/[0.03] text-slate-400 hover:bg-slate-50 hover:text-primary transition-all rounded-[14px] flex items-center justify-center shadow-sm shrink-0 cursor-pointer active:scale-95"
+                title="Back to Grid"
+              >
+                <ChevronLeft className="w-5 h-5 stroke-[2.5]" />
+              </button>
+
+              {/* ALL ITEMS BUTTON */}
+              <button
+                onClick={() => setActiveCategory('All Items')}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2.5 rounded-[14px] border text-[9px] font-black uppercase tracking-widest transition-all shrink-0 cursor-pointer active:scale-95 shadow-sm",
+                  activeCategory === 'All Items'
+                    ? "bg-primary text-white border-primary shadow-md shadow-primary/20 font-extrabold"
+                    : "bg-white border-black/[0.03] text-slate-600 hover:bg-slate-50 hover:text-primary"
+                )}
+              >
+                <span>🍽️</span>
+                <span>All Items</span>
+              </button>
+
+              {/* DYNAMIC CATEGORIES BUTTONS */}
+              {categories.map(cat => {
+                const styles = getCategoryStyles(cat.category_name);
+                const isActive = activeCategory === cat.category_name;
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => setActiveCategory(cat.category_name)}
+                    className={cn(
+                      "flex items-center gap-2 px-4 py-2.5 rounded-[14px] border text-[9px] font-black uppercase tracking-widest transition-all shrink-0 cursor-pointer active:scale-95 shadow-sm",
+                      isActive
+                        ? "bg-primary text-white border-primary shadow-md shadow-primary/20 font-extrabold"
+                        : "bg-white border-black/[0.03] text-slate-600 hover:bg-slate-50 hover:text-primary"
+                    )}
+                  >
+                    <div className="w-4 h-4 shrink-0 flex items-center justify-center text-xs">
+                       {cat.icon && cat.icon.length > 2 ? (
+                         <img src={cat.icon} alt={cat.category_name} className="w-4 h-4 object-cover rounded-sm" />
+                       ) : (
+                         <span>{cat.icon || '🍽️'}</span>
+                       )}
+                    </div>
+                    <span>{cat.category_name}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Dynamic Menu Grid */}
+            <div className="flex-1 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 lg:gap-6 items-start pr-1 pb-32 lg:pb-12 scrollbar-hide">
+              {filteredItems.length > 0 ? (
+                filteredItems.map(item => (
+                  <div 
+                    key={item.id} 
+                    onClick={() => addToCart(item)}
+                    className="card group cursor-pointer p-5 flex flex-col items-center justify-center text-center relative overflow-hidden bg-white min-h-[190px] h-full transition-all hover:shadow-[0_15px_30px_rgba(108,99,255,0.06)] hover:-translate-y-1 active:scale-95 shadow-[0_10px_30px_rgba(0,0,0,0.02)] border border-black/[0.02] rounded-[24px]"
+                  >
+                    {/* Floating Price tag */}
+                    <div className="absolute top-3 right-3 z-20">
+                       <span className="badge bg-primary-light text-primary border border-primary/10 text-[9px] font-black tracking-tight px-2.5 py-1 shadow-sm rounded-full">
+                          ₹{item.price}
                        </span>
                     </div>
-                    <div className="absolute top-3 right-3 lg:top-4 lg:right-4 flex flex-col items-end gap-1">
-                      <span className="badge bg-emerald-500/90 backdrop-blur-md text-white border-none shadow-lg text-[7px] lg:text-[9px] py-1 px-2 font-black uppercase tracking-widest">
-                         READY
-                      </span>
+
+                    {/* Centered Circular Image container */}
+                    <div className="w-18 h-18 rounded-full bg-slate-50/50 flex items-center justify-center overflow-hidden border border-black/[0.01] mb-3.5 shrink-0 shadow-inner transition-transform duration-500 group-hover:scale-105">
+                        {getImageUrl(item.image).length > 2 ? (
+                          <img 
+                            src={getImageUrl(item.image)} 
+                            alt={item.item_name || item.name} 
+                            className="w-full h-full object-cover" 
+                          />
+                        ) : (
+                          <span className="text-3xl">{getImageUrl(item.image)}</span>
+                        )}
+                    </div>
+
+                    {/* Typography info */}
+                    <div className="relative z-10 flex flex-col items-center">
+                      <h4 className="font-extrabold text-slate-800 text-xs md:text-sm leading-tight uppercase tracking-tight break-words px-1">
+                        {item.item_name || item.name || "Unnamed Item"}
+                      </h4>
+                      <p className="text-slate-400 text-[9px] font-medium leading-relaxed line-clamp-2 mt-1 px-1">
+                        {item.description || "Prepared fresh with premium ingredients."}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="col-span-full py-20 flex flex-col items-center justify-center text-center">
+                   <div className="w-20 h-20 bg-slate-50 rounded-[2.5rem] flex items-center justify-center mb-6 shadow-inner">
+                      <Search className="w-8 h-8 text-slate-200" />
                    </div>
+                   <h4 className="text-xl font-black text-text-primary uppercase tracking-tight">No Items Found</h4>
+                   <p className="text-text-secondary text-[10px] font-black uppercase tracking-widest mt-2">No products available in this category</p>
+                   <button 
+                     onClick={() => { setViewMode('categories'); setSearchQuery(''); }}
+                     className="mt-6 text-primary font-black uppercase tracking-[0.2em] text-[8px] hover:underline transition-all"
+                   >
+                     Show All Categories
+                   </button>
                 </div>
-
-                <div className="relative z-10 mb-3 flex-1 flex flex-col min-h-[40px] lg:min-h-[50px]">
-                  <h4 className="font-black text-slate-900 text-[11px] lg:text-sm leading-tight group-hover:text-primary uppercase tracking-tight mb-1 break-words">
-                    {item.item_name || item.name || "Unnamed Item"}
-                  </h4>
-                  <p className="text-slate-500 text-[9px] lg:text-[10px] font-medium leading-relaxed line-clamp-4 lg:line-clamp-5">
-                    {item.description || "Freshly prepared with premium ingredients."}
-                  </p>
-                </div>
-
-                <div className="mt-auto pt-2 lg:pt-3 border-t border-slate-50 flex items-center justify-between relative z-10 shrink-0">
-                  <div className="flex flex-col">
-                     <span className="text-[8px] lg:text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Price</span>
-                     <p className="text-sm lg:text-xl font-black text-text-primary tracking-tighter leading-none">₹{item.price}</p>
-                  </div>
-                  <div 
-                    className="w-7 h-7 lg:w-10 lg:h-10 bg-primary text-white rounded-lg lg:rounded-xl flex items-center justify-center shadow-lg shadow-primary/30 group-hover:bg-primary-dark transition-colors"
-                  >
-                    <Plus className="w-4 h-4 lg:w-5 lg:h-5 lg:stroke-[3]" />
-                  </div>
-                </div>
-                
-                <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-primary/5 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
-              </div>
-            ))
-          ) : (
-            <div className="col-span-full py-20 flex flex-col items-center justify-center text-center">
-               <div className="w-20 h-20 bg-slate-50 rounded-[2.5rem] flex items-center justify-center mb-6 shadow-inner">
-                  <Search className="w-8 h-8 text-slate-200" />
-               </div>
-               <h4 className="text-xl font-black text-text-primary uppercase tracking-tight">No Items Found</h4>
-               <p className="text-text-secondary text-[10px] font-black uppercase tracking-widest mt-2">No products available in this category</p>
-               <button 
-                 onClick={() => { setActiveCategory('All Items'); setSearchQuery(''); }}
-                 className="mt-6 text-primary font-black uppercase tracking-[0.2em] text-[8px] hover:underline transition-all"
-               >
-                 Show All Products
-               </button>
+              )}
             </div>
-          )}
+          </div>
+        )}
+
+        {/* Footer Row */}
+        <div className="flex justify-between items-center bg-slate-50/50 p-4 border-t border-slate-100 -mx-4 md:-mx-6 mt-auto shrink-0 rounded-b-3xl">
+          <div className="flex gap-2">
+             <button 
+               onClick={() => setViewMode('categories')} 
+               className={cn(
+                 "px-4 py-2.5 rounded-xl font-black uppercase tracking-widest text-[9px] cursor-pointer transition-all active:scale-95", 
+                 viewMode === 'categories' 
+                   ? "bg-primary text-white shadow-md shadow-primary/20" 
+                   : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50"
+               )}
+             >
+               Categories
+             </button>
+             <button onClick={() => showToastMessage('Hold Order coming soon', 'success')} className="px-4 py-2.5 bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 rounded-xl font-black uppercase tracking-widest text-[9px] cursor-pointer transition-all active:scale-95">Hold Order</button>
+             <button onClick={() => showToastMessage('Print Bill coming soon', 'success')} className="px-4 py-2.5 bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 rounded-xl font-black uppercase tracking-widest text-[9px] cursor-pointer transition-all active:scale-95">Print Bill</button>
+          </div>
+          <div className="flex gap-2">
+             <button onClick={() => showToastMessage('Custom Amount coming soon', 'success')} className="px-4 py-2.5 bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 rounded-xl font-black uppercase tracking-widest text-[9px] cursor-pointer transition-all active:scale-95">Custom Amount</button>
+             <button 
+               onClick={() => { if(cart.length > 0 && confirm('Clear all items from cart?')) setCart([]); }}
+               className="px-4 py-2.5 bg-white border border-rose-200 hover:bg-rose-50 text-rose-500 rounded-xl font-black uppercase tracking-widest text-[9px] cursor-pointer transition-all active:scale-95"
+             >
+               Clear Cart
+             </button>
+          </div>
         </div>
       </div>
 
@@ -445,66 +668,85 @@ const POS = () => {
           {/* Cart Items Scroll */}
           <div className="flex-1 overflow-y-auto p-4 lg:p-5 space-y-4 scrollbar-hide">
             {cart.length > 0 ? (
-              cart.map(item => (
+              cart.map(item => {
+                const baseName = item.item_name || item.name.split(' (')[0];
+                const modifiersText = item.addons 
+                  ? item.addons.map(a => a.name).join(', ') 
+                  : (item.name.includes('(') ? item.name.split('(')[1].replace(')', '') : '');
+
+                return (
                   <div 
                     key={item.cartId} 
-                    className="flex flex-col gap-3 group bg-slate-50/30 p-2.5 rounded-2xl hover:bg-slate-50"
+                    className="flex flex-col gap-2.5 bg-white shadow-sm border border-slate-100/50 p-4 rounded-[20px] hover:shadow-[0_10px_20px_rgba(0,0,0,0.01)] transition-all relative group"
                   >
-                  <div className="flex items-center gap-4">
-                     <div className="w-12 h-12 bg-surface rounded-2xl flex items-center justify-center overflow-hidden text-2xl shrink-0 shadow-sm">
-                        {getImageUrl(item.image).length > 2 ? (
-                          <img src={getImageUrl(item.image)} alt={item.item_name || item.name} className="w-full h-full object-cover" />
-                        ) : (
-                          getImageUrl(item.image)
-                        )}
-                     </div>
-                     <div className="flex-1 min-w-0">
-                        <h5 className="font-bold text-text-primary text-sm truncate leading-tight">{item.item_name || item.name}</h5>
-                        <p className="text-xs text-primary font-black mt-0.5 tracking-tight">₹{item.price}</p>
-                     </div>
-                     <div className="flex items-center gap-1.5 bg-surface p-1 rounded-xl border border-slate-100 shadow-sm">
-                        <button onClick={() => updateQty(item.cartId, -1)} className="w-8 h-8 flex items-center justify-center hover:bg-slate-50 rounded-lg text-text-secondary hover:text-primary">
-                           <Minus className="w-4 h-4" />
-                        </button>
-                        <span className="w-6 text-center text-xs font-black text-text-primary">{item.qty}</span>
-                        <button onClick={() => updateQty(item.cartId, 1)} className="w-8 h-8 flex items-center justify-center hover:bg-slate-50 rounded-lg text-text-secondary hover:text-primary">
-                           <Plus className="w-4 h-4" />
-                        </button>
-                     </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-3">
-                     <button 
-                       onClick={() => setEditingNote(item.cartId)}
-                       className={cn(
-                         "flex-1 flex items-center gap-2 px-3 py-2 rounded-lg text-[9px] font-bold uppercase tracking-widest",
-                         item.note ? "bg-indigo-50 text-primary border border-primary/20" : "bg-surface text-slate-400 border border-slate-100 hover:bg-slate-100"
-                       )}
-                     >
-                        <MessageSquare className="w-3 h-3" />
-                        {item.note || 'Add Special Instruction'}
-                     </button>
-                     <button onClick={() => removeFromCart(item.cartId)} className="p-2 text-slate-300 hover:text-primary hover:bg-red-50 rounded-lg">
-                        <X className="w-4 h-4" />
-                     </button>
-                  </div>
-
-                  {editingNote === item.cartId && (
-                    <div className="overflow-hidden">
-                      <div className="pt-2 flex flex-col gap-2">
-                         <textarea 
-                           autoFocus
-                           onBlur={(e) => updateNote(item.cartId, e.target.value)}
-                           defaultValue={item.note}
-                           placeholder="e.g. Extra spicy, No onions..."
-                           className="w-full p-4 bg-surface border-2 border-primary/20 rounded-2xl outline-none text-xs font-bold text-text-primary placeholder:text-slate-300 min-h-[80px] shadow-inner"
-                         />
-                         <button onClick={() => setEditingNote(null)} className="btn-primary py-2 text-[8px] uppercase tracking-widest">Save Note</button>
-                      </div>
+                    {/* Top Row: Name and Total Price */}
+                    <div className="flex items-center justify-between">
+                       <h5 className="font-extrabold text-slate-800 text-xs uppercase tracking-tight truncate max-w-[180px]">
+                         {baseName}
+                       </h5>
+                       <span className="font-black text-slate-800 text-xs">
+                         ₹{item.price * item.qty}
+                       </span>
                     </div>
-                  )}
-                </div>
-              ))
+
+                    {/* Middle Row: Modifiers and Notes */}
+                    {modifiersText && (
+                      <p className="text-slate-400 text-[9px] font-bold tracking-tight leading-relaxed">
+                        {modifiersText}
+                      </p>
+                    )}
+                    {item.note && (
+                      <p className="text-primary text-[8px] font-extrabold uppercase tracking-wider bg-primary-light px-2 py-0.5 rounded-md w-fit">
+                        Note: {item.note}
+                      </p>
+                    )}
+
+                    {/* Bottom Row: Adjusters and Actions */}
+                    <div className="flex items-center justify-between mt-1 shrink-0">
+                       <div className="flex items-center gap-1 bg-slate-50 border border-slate-100 rounded-xl p-0.5 shadow-inner">
+                          <button onClick={() => updateQty(item.cartId, -1)} className="w-7 h-7 flex items-center justify-center bg-white border border-slate-100/50 rounded-lg hover:text-primary text-slate-400 transition-all cursor-pointer">
+                             <Minus className="w-3 h-3" />
+                          </button>
+                          <span className="w-5 text-center text-[10px] font-black text-slate-700">{item.qty}</span>
+                          <button onClick={() => updateQty(item.cartId, 1)} className="w-7 h-7 flex items-center justify-center bg-white border border-slate-100/50 rounded-lg hover:text-primary text-slate-400 transition-all cursor-pointer">
+                             <Plus className="w-3 h-3" />
+                          </button>
+                       </div>
+                       
+                       <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => setEditingNote(item.cartId)}
+                            className={cn(
+                              "p-2 rounded-xl transition-all text-xs font-bold uppercase cursor-pointer",
+                              item.note ? "bg-primary-light text-primary border border-primary/20" : "text-slate-300 hover:text-primary hover:bg-slate-50"
+                            )}
+                            title="Add special instructions"
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => removeFromCart(item.cartId)} className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all cursor-pointer">
+                             <Trash2 className="w-4 h-4" />
+                          </button>
+                       </div>
+                    </div>
+
+                    {editingNote === item.cartId && (
+                      <div className="overflow-hidden">
+                        <div className="pt-2 flex flex-col gap-2">
+                           <textarea 
+                             autoFocus
+                             onBlur={(e) => updateNote(item.cartId, e.target.value)}
+                             defaultValue={item.note}
+                             placeholder="e.g. Extra spicy, No onions..."
+                             className="w-full p-4 bg-surface border-2 border-primary/20 rounded-2xl outline-none text-xs font-bold text-text-primary placeholder:text-slate-300 min-h-[80px] shadow-inner"
+                           />
+                           <button onClick={() => setEditingNote(null)} className="btn-primary py-2 text-[8px] uppercase tracking-widest cursor-pointer">Save Note</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
             ) : (
               <div className="flex flex-col items-center justify-center text-center py-12 opacity-40">
                 <ShoppingCart className="w-10 h-10 text-slate-300 mb-4" />
@@ -514,23 +756,23 @@ const POS = () => {
           </div>
 
           {/* Billing Summary Panel */}
-          <div className="p-5 lg:p-6 bg-gradient-to-br from-primary to-primary-hover text-white rounded-t-[2.5rem] shadow-[0_-20px_50px_rgba(229,139,67,0.15)]">
+          <div className="p-5 lg:p-6 bg-slate-50/80 border-t border-slate-100 rounded-t-[2rem] shadow-[0_-10px_35px_rgba(0,0,0,0.02)]">
             <div className="space-y-2.5 mb-4">
               <div className="flex justify-between items-center text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em]">
                 <span>Subtotal</span>
-                <span className="text-white">₹{subtotal}</span>
+                <span className="text-slate-700 font-extrabold">₹{subtotal}</span>
               </div>
               
               <div className="flex justify-between items-center text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em]">
                 <span>Tax (GST 5%)</span>
-                <span className="text-white">₹{gst}</span>
+                <span className="text-slate-700 font-extrabold">₹{gst}</span>
               </div>
 
               {/* Discount Selector */}
               <div className="py-2">
                 <div className="flex items-center gap-2 mb-2">
-                  <Tag className="w-3 h-3 text-white/40" />
-                  <span className="text-[8px] font-black uppercase tracking-widest text-white/40">Apply Discount</span>
+                  <Tag className="w-3 h-3 text-primary/40" />
+                  <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Apply Discount</span>
                 </div>
                 <div className="flex gap-2">
                   {[0, 5, 10, 15, 20].map((d) => (
@@ -539,10 +781,10 @@ const POS = () => {
                       type="button"
                       onClick={() => setDiscount(d)}
                       className={cn(
-                        "flex-1 py-1.5 rounded-lg text-[9px] font-bold transition-all border",
+                        "flex-1 py-1.5 rounded-lg text-[9px] font-bold transition-all border cursor-pointer",
                         discount === d 
-                          ? "bg-surface text-primary border-white" 
-                          : "bg-surface/5 text-white border-white/10 hover:bg-surface/10"
+                          ? "bg-primary text-white border-primary shadow-sm" 
+                          : "bg-white text-slate-500 border-slate-100 hover:bg-slate-50"
                       )}
                     >
                       {d}%
@@ -551,17 +793,17 @@ const POS = () => {
                 </div>
               </div>
               {discount > 0 && (
-                <div className="flex justify-between items-center text-emerald-400 text-[10px] font-bold uppercase tracking-[0.2em]">
+                <div className="flex justify-between items-center text-emerald-600 text-[10px] font-bold uppercase tracking-[0.2em]">
                   <span>Discount ({discount}%)</span>
                   <span>- ₹{discountAmount}</span>
                 </div>
               )}
 
               {/* Service Charge Selector */}
-              <div className="py-2 border-t border-white/10">
+              <div className="py-2 border-t border-black/[0.03]">
                 <div className="flex items-center gap-2 mb-2">
-                  <Sparkles className="w-3 h-3 text-white/40" />
-                  <span className="text-[8px] font-black uppercase tracking-widest text-white/40">Service Charge</span>
+                  <Sparkles className="w-3 h-3 text-primary/40" />
+                  <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Service Charge</span>
                 </div>
                 <div className="flex gap-2">
                   {[
@@ -575,10 +817,10 @@ const POS = () => {
                       type="button"
                       onClick={() => setServiceChargePercent(opt.value)}
                       className={cn(
-                        "flex-1 py-1.5 rounded-lg text-[8px] font-bold transition-all border whitespace-nowrap",
+                        "flex-1 py-1.5 rounded-lg text-[8px] font-bold transition-all border whitespace-nowrap cursor-pointer",
                         serviceChargePercent === opt.value 
-                          ? "bg-surface text-primary border-white shadow-sm" 
-                          : "bg-surface/5 text-white border-white/10 hover:bg-surface/10"
+                          ? "bg-primary text-white border-primary shadow-sm" 
+                          : "bg-white text-slate-500 border-slate-100 hover:bg-slate-50"
                       )}
                     >
                       {opt.label}
@@ -587,21 +829,21 @@ const POS = () => {
                 </div>
               </div>
               {serviceChargePercent > 0 && (
-                <div className="flex justify-between items-center text-amber-300 text-[10px] font-bold uppercase tracking-[0.2em]">
+                <div className="flex justify-between items-center text-amber-600 text-[10px] font-bold uppercase tracking-[0.2em]">
                   <span>Service Charge ({serviceChargePercent}%)</span>
                   <span>+ ₹{serviceChargeAmount}</span>
                 </div>
               )}
-              <div className="pt-4 mt-2 border-t border-white/10 flex justify-between items-end">
+              <div className="pt-4 mt-2 border-t border-black/[0.03] flex justify-between items-end">
                 <div className="flex flex-col">
-                  <span className="text-white/40 text-[9px] font-black uppercase tracking-[0.3em] mb-1.5">Grand Total</span>
+                  <span className="text-slate-400 text-[9px] font-black uppercase tracking-[0.3em] mb-1.5">Grand Total</span>
                   <div className="flex items-baseline gap-2">
-                     <h4 className="text-3xl lg:text-4xl font-black text-white tracking-tighter">₹{total}</h4>
-                     <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest">INR</span>
+                     <h4 className="text-3xl lg:text-4xl font-black text-slate-800 tracking-tighter">₹{total}</h4>
+                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">INR</span>
                   </div>
                 </div>
-                <div className="p-3 bg-surface/10 rounded-2xl border border-white/20">
-                   <Users className="w-5 h-5 text-white" />
+                <div className="p-3 bg-white rounded-xl border border-slate-100 shadow-sm text-slate-500">
+                   <Users className="w-5 h-5" />
                 </div>
               </div>
             </div>
@@ -610,15 +852,15 @@ const POS = () => {
               <button 
                 disabled={cart.length === 0 || isProcessing}
                 onClick={handleKDS}
-                className="flex flex-col items-center justify-center gap-2 py-4 bg-surface/10 border-2 border-white/10 rounded-2xl text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-surface/20 hover:border-white/20 disabled:opacity-50 transition-all group active:scale-95"
+                className="flex flex-col items-center justify-center gap-2 py-4 bg-[#F3EEFF] text-[#6C63FF] border border-[#6C63FF]/10 rounded-[18px] text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-[#6C63FF]/15 disabled:opacity-50 transition-all group active:scale-95 cursor-pointer"
               >
-                <ChefHat className={cn("w-5 h-5 text-white")} /> 
+                <ChefHat className={cn("w-5 h-5 text-[#6C63FF]")} /> 
                 {isProcessing ? 'Sending...' : 'Send to KDS'}
               </button>
               <button 
                 onClick={() => setShowPaymentModal(true)}
                 disabled={cart.length === 0 || isProcessing}
-                className="flex flex-col items-center justify-center gap-2 py-4 bg-surface text-primary rounded-2xl text-[10px] font-bold uppercase tracking-[0.2em] shadow-2xl shadow-black/10 hover:bg-slate-50 disabled:opacity-50 transition-all group active:scale-95"
+                className="flex flex-col items-center justify-center gap-2 py-4 bg-gradient-premium text-white rounded-[18px] text-[10px] font-bold uppercase tracking-[0.2em] shadow-lg shadow-primary/15 hover:opacity-95 disabled:opacity-50 transition-all group active:scale-95 cursor-pointer"
               >
                 <CreditCard className="w-5 h-5" /> 
                 Checkout
@@ -798,56 +1040,57 @@ const POS = () => {
         document.body
       )}
 
-      {/* Size Selection Modal */}
-      {selectedItemForSize && (
-        <div className="fixed inset-0 z-[500] flex items-center justify-center p-4">
-          <div 
-            onClick={() => setSelectedItemForSize(null)} 
-            className="absolute inset-0 bg-slate-900/60" 
-          />
-          <div 
-            className="relative w-full max-w-[95%] md:max-w-[440px] bg-surface rounded-[2rem] md:rounded-[2.5rem] shadow-2xl overflow-hidden border border-white/20 self-center"
-          >
-            <div className="px-8 py-8 flex flex-col items-center text-center">
-              <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center text-5xl mb-6 shadow-inner">
-                {getImageUrl(selectedItemForSize.image)}
-              </div>
-              <h3 className="text-2xl font-black text-text-primary tracking-tight uppercase leading-tight">
-                {selectedItemForSize.item_name || selectedItemForSize.name}
-              </h3>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mt-2 mb-8">Select Item Size</p>
-              
-              <div className="w-full space-y-3">
-                {selectedItemForSize.sizes.map((size) => (
-                  <button
-                    key={size.name}
-                    onClick={() => addToCart(selectedItemForSize, size)}
-                    className="w-full flex items-center justify-between p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl hover:border-primary/30 hover:bg-indigo-50/30 transition-all group"
-                  >
-                    <div className="flex flex-col items-start">
-                      <span className="text-xs font-black text-text-primary uppercase tracking-wider">{size.name}</span>
-                      <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Custom Portion</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-lg font-black text-primary">₹{size.price}</span>
-                      <div className="w-8 h-8 bg-surface rounded-lg flex items-center justify-center text-slate-300 group-hover:text-primary group-hover:bg-primary/10 transition-all">
-                        <ChevronRight className="w-5 h-5" />
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
+      {/* Addon / Portion Selection Modal */}
+      {selectedItemForAddons && (() => {
+        const item = selectedItemForAddons;
+        const parsedSizes = item.sizes ? (typeof item.sizes === 'string' ? JSON.parse(item.sizes) : item.sizes) : [];
+        const parsedAddons = item.addons ? (typeof item.addons === 'string' ? JSON.parse(item.addons) : item.addons) : [];
 
-              <button 
-                onClick={() => setSelectedItemForSize(null)}
-                className="mt-8 text-[10px] font-black text-slate-300 uppercase tracking-[0.3em] hover:text-primary"
-              >
-                Cancel Selection
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+        return (
+          <AddonSelectionModal 
+            item={item}
+            sizes={parsedSizes}
+            addons={parsedAddons}
+            onClose={() => setSelectedItemForAddons(null)}
+            onSave={(chosenSize, chosenAddons) => {
+              // Calculate final unit price
+              const basePrice = chosenSize ? chosenSize.price : item.price;
+              const addonsPrice = chosenAddons.reduce((sum, a) => sum + a.price, 0);
+              const finalPrice = basePrice + addonsPrice;
+
+              // Generate name and list of selected addons
+              const nameSuffix = [
+                chosenSize ? chosenSize.name : '',
+                ...chosenAddons.map(a => a.name)
+              ].filter(Boolean).join(' • ');
+
+              const finalName = nameSuffix ? `${item.item_name || item.name} (${nameSuffix})` : (item.item_name || item.name);
+              
+              // Sort addons to get a deterministic cartId
+              const sortedAddonKeys = chosenAddons.map(a => a.name).sort().join('_');
+              const cartId = `${item.id}-${chosenSize ? chosenSize.name : 'default'}-${sortedAddonKeys}`;
+
+              setCart(prev => {
+                const existing = prev.find(i => i.cartId === cartId);
+                if (existing) {
+                  return prev.map(i => i.cartId === cartId ? { ...i, qty: i.qty + 1 } : i);
+                }
+                return [...prev, { 
+                  ...item, 
+                  cartId, 
+                  name: finalName, 
+                  price: finalPrice, 
+                  qty: 1, 
+                  note: '', 
+                  addons: [chosenSize, ...chosenAddons].filter(Boolean)
+                }];
+              });
+
+              setSelectedItemForAddons(null);
+            }}
+          />
+        );
+      })()}
       {/* Hidden Printable Receipt - 80mm Thermal Style */}
       {orderForReceipt && (
         <div id="printable-area" className="hidden print:block printable-area receipt-print active-print">
@@ -947,6 +1190,123 @@ const POS = () => {
         </div>
       )}
     </div>
+  );
+};
+
+const AddonSelectionModal = ({ item, sizes, addons, onClose, onSave }) => {
+  const [selectedSize, setSelectedSize] = useState(sizes[0] || null);
+  const [selectedAddons, setSelectedAddons] = useState([]);
+
+  const toggleAddon = (addon) => {
+    setSelectedAddons(prev => {
+      const exists = prev.some(a => a.name === addon.name);
+      if (exists) return prev.filter(a => a.name !== addon.name);
+      return [...prev, addon];
+    });
+  };
+
+  const basePrice = selectedSize ? selectedSize.price : item.price;
+  const addonsTotal = selectedAddons.reduce((sum, a) => sum + a.price, 0);
+  const totalPrice = basePrice + addonsTotal;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+      {/* Backdrop overlay */}
+      <div onClick={onClose} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-10" />
+
+      {/* Modal Container */}
+      <div className="relative w-full max-w-md bg-surface/95 backdrop-blur-xl rounded-[24px] p-6 sm:p-8 shadow-2xl border border-white/20 z-20 animate-in fade-in zoom-in duration-300">
+        <h3 className="text-xl sm:text-2xl font-black text-center uppercase tracking-tight text-text-primary leading-tight">
+          {item.item_name || item.name}
+        </h3>
+        <p className="text-[9px] font-black text-slate-400 text-center uppercase tracking-[0.25em] mt-1.5 leading-none">
+           Customize your selection
+        </p>
+
+        {/* Portion selection */}
+        {sizes.length > 0 && (
+          <div className="mt-6 space-y-3">
+            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block ml-1">Select Portion Size</span>
+            <div className="grid grid-cols-2 gap-3">
+              {sizes.map(s => (
+                <button
+                  key={s.name}
+                  type="button"
+                  onClick={() => setSelectedSize(s)}
+                  className={cn(
+                    "p-3.5 rounded-[18px] border flex flex-col items-center justify-center transition-all cursor-pointer active:scale-95",
+                    selectedSize?.name === s.name 
+                      ? "border-primary bg-primary-light text-primary shadow-sm shadow-primary/5 font-extrabold" 
+                      : "border-slate-100 bg-slate-50/30 text-slate-500 hover:bg-slate-50"
+                  )}
+                >
+                  <span className="text-[10px] font-black uppercase tracking-wider">{s.name}</span>
+                  <span className="text-xs font-black mt-1">₹{s.price}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Toppings / Addons selection */}
+        {addons.length > 0 && (
+          <div className="mt-6 space-y-3">
+            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block ml-1">Optional Extras / Toppings</span>
+            <div className="space-y-2 max-h-[160px] overflow-y-auto scrollbar-hide pr-1">
+              {addons.map(a => {
+                const isSelected = selectedAddons.some(addon => addon.name === a.name);
+                return (
+                  <button
+                    key={a.name}
+                    type="button"
+                    onClick={() => toggleAddon(a)}
+                    className={cn(
+                      "w-full flex items-center justify-between p-4 border rounded-[18px] transition-all cursor-pointer active:scale-[0.98]",
+                      isSelected 
+                        ? "border-emerald-500/20 bg-emerald-50/30 text-emerald-600 font-extrabold" 
+                        : "border-slate-100/70 bg-slate-50/30 text-slate-500 hover:bg-slate-50"
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={cn("w-4 h-4 rounded border flex items-center justify-center text-white text-[10px] transition-all duration-200", isSelected ? "bg-emerald-500 border-emerald-500" : "border-slate-300 bg-white")}>
+                        {isSelected && '✓'}
+                      </div>
+                      <span className="text-[10px] font-black uppercase tracking-wider">{a.name}</span>
+                    </div>
+                    <span className="text-xs font-black">+₹{a.price}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Final pricing and submit button */}
+        <div className="mt-8 border-t border-black/[0.03] pt-6 flex items-center justify-between bg-surface/20 rounded-2xl">
+          <div className="flex flex-col">
+            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Total Price</span>
+            <span className="text-xl font-black text-slate-900 tracking-tighter leading-none mt-1">₹{totalPrice}</span>
+          </div>
+          <div className="flex gap-2">
+            <button 
+              type="button"
+              onClick={onClose}
+              className="px-5 py-3 border border-slate-100/70 bg-white rounded-[18px] font-black uppercase tracking-widest text-[9px] text-slate-400 hover:bg-slate-50 cursor-pointer active:scale-95 transition-all"
+            >
+              Cancel
+            </button>
+            <button 
+              type="button"
+              onClick={() => onSave(selectedSize, selectedAddons)}
+              className="px-6 py-3 bg-gradient-premium text-white rounded-[18px] font-black uppercase tracking-widest text-[9px] cursor-pointer active:scale-95 shadow-lg shadow-primary/15 transition-all"
+            >
+              Add To Cart
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 };
 

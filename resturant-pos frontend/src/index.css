@@ -2,39 +2,39 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #EF8E4B; /* Vibrant Brand Orange from Image */
-  --color-primary-hover: #F2994A;
-  --color-primary-light: #FFF9F5;
+  --color-primary: #6C63FF; /* Glowing Purple Accent */
+  --color-primary-hover: #5A52E6;
+  --color-primary-light: #F3EEFF;
   
   /* Landing Page Specific Colors */
-  --color-landing-primary: #E58B43;
-  --color-landing-secondary: #BFE7E3;
-  --color-dark: #2B2B2B;
-  --color-dark-lighter: #3D3D3D;
-  --color-dark-glass: rgba(43, 43, 43, 0.7);
+  --color-landing-primary: #6C63FF;
+  --color-landing-secondary: #E7F4FF;
+  --color-dark: #1A1C29;
+  --color-dark-lighter: #282A3A;
+  --color-dark-glass: rgba(26, 28, 41, 0.7);
   
-  --color-background: #F2FBF9; /* Even lighter Mint/Sky Blue background */
-  --color-surface: #FFF5EE; /* Peach Surface for Cards */
-  --color-border: rgba(0, 0, 0, 0.12); /* Slightly darker for better visibility */
-  --color-text-primary: #2B2B2B;
-  --color-text-secondary: #5C5C5C;
-  --color-success: #2D6A4F;
-  --color-danger: #C0573E; /* Warm Terracotta instead of bright red */
-  --color-warning: #EE9B00;
+  --color-background: #F9FAFD; /* Main Content Background */
+  --color-surface: #FFFFFF; /* White Card Surface */
+  --color-border: rgba(0, 0, 0, 0.04); /* Minimal light border */
+  --color-text-primary: #1A1C29; /* Modern dark/navy tone */
+  --color-text-secondary: #68718E; /* Muted SaaS slate tone */
+  --color-success: #4EAD7C; /* Soft Mint green */
+  --color-danger: #FF8BA7; /* Soft Pastel pink/red, no harsh red */
+  --color-warning: #FFD166; /* Soft Pastel yellow */
 
-  /* Additional Tropical Tones */
-  --color-mint-dark: #B5DAD5;
-  --color-mint-sidebar: #C4E2DF;
+  /* Additional Pastel Tones */
+  --color-mint-dark: #EAFBF3;
+  --color-mint-sidebar: #F7F8FC; /* Sidebar background */
   
-  --background-image-gradient-tropical: linear-gradient(135deg, #F2FBF9 0%, #FFF5EE 100%);
-  --background-image-gradient-premium: linear-gradient(135deg, #E58B43 0%, #F2A15D 100%);
+  --background-image-gradient-tropical: linear-gradient(135deg, #F9FAFD 0%, #FFFFFF 100%);
+  --background-image-gradient-premium: linear-gradient(135deg, #6C63FF 0%, #8B85FF 100%);
   
-  --shadow-premium: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
-  --shadow-premium-hover: 0 20px 35px -5px rgba(229, 139, 67, 0.15), 0 10px 15px -5px rgba(229, 139, 67, 0.05);
+  --shadow-premium: 0 10px 30px rgba(0, 0, 0, 0.03), 0 1px 3px rgba(0, 0, 0, 0.02);
+  --shadow-premium-hover: 0 20px 35px rgba(108, 99, 255, 0.08), 0 1px 5px rgba(108, 99, 255, 0.03);
   
-  --radius-2xl: 1rem;
-  --radius-3xl: 1.5rem;
-  --radius-4xl: 2rem;
+  --radius-2xl: 16px;
+  --radius-3xl: 24px; /* Card border radius: 24px */
+  --radius-4xl: 32px;
   
   --font-sans: "Inter", sans-serif;
   --font-display: "Outfit", sans-serif;
@@ -64,15 +64,15 @@ body {
 
 @layer utilities {
   .glass {
-    @apply bg-surface/40 backdrop-blur-md border border-white/30;
+    @apply bg-white/70 backdrop-blur-md border border-white/40;
   }
   
   .glass-dark {
-    @apply bg-black/20 backdrop-blur-md border border-white/10;
+    @apply bg-black/10 backdrop-blur-md border border-white/5;
   }
 
   .card {
-    @apply bg-surface border border-border rounded-[2rem] p-6 shadow-premium transition-all duration-300;
+    @apply bg-surface border border-border rounded-[24px] p-6 shadow-premium transition-all duration-300;
   }
 
   .card-interactive {
@@ -80,11 +80,11 @@ body {
   }
 
   .btn-primary {
-    @apply bg-primary text-white px-8 py-3 rounded-full text-[11px] font-black uppercase tracking-widest hover:bg-primary-hover shadow-xl shadow-primary/20 transition-all duration-300 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2;
+    @apply bg-gradient-premium text-white px-8 py-3 rounded-[18px] text-[11px] font-black uppercase tracking-widest shadow-lg shadow-primary/15 transition-all duration-300 hover:opacity-95 hover:scale-[1.01] active:scale-[0.97] disabled:opacity-50 flex items-center justify-center gap-2;
   }
 
   .btn-secondary {
-    @apply bg-surface text-text-primary border border-border px-8 py-3 rounded-full text-[11px] font-black uppercase tracking-widest hover:bg-primary-light transition-all duration-300 shadow-sm disabled:opacity-50 flex items-center justify-center gap-2;
+    @apply bg-primary-light text-primary border border-primary/10 px-8 py-3 rounded-[18px] text-[11px] font-black uppercase tracking-widest hover:bg-primary/10 transition-all duration-300 shadow-sm disabled:opacity-50 flex items-center justify-center gap-2;
   }
 
   .badge {
@@ -97,21 +97,21 @@ body {
   }
   
   .btn-premium {
-    @apply bg-gradient-premium hover:opacity-90 transition-all duration-300 font-semibold px-8 py-3.5 rounded-full shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 flex items-center justify-center text-white;
+    @apply bg-gradient-premium hover:opacity-90 transition-all duration-300 font-semibold px-8 py-3.5 rounded-[18px] shadow-xl shadow-primary/20 hover:scale-105 active:scale-[0.97] flex items-center justify-center text-white;
   }
   
   .btn-outline {
-    @apply border-2 border-primary text-primary hover:bg-primary hover:text-white transition-all duration-300 font-semibold px-8 py-3 rounded-full flex items-center justify-center;
+    @apply border-2 border-primary text-primary hover:bg-primary hover:text-white transition-all duration-300 font-semibold px-8 py-3 rounded-[18px] flex items-center justify-center;
   }
 }
 
 @layer components {
   .input-field {
-    @apply w-full px-5 py-4 rounded-2xl border-2 border-slate-100 bg-surface focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all placeholder:text-slate-300 text-sm font-bold text-text-primary;
+    @apply w-full px-5 py-4 rounded-[18px] border-2 border-slate-100 bg-surface focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all placeholder:text-slate-300 text-sm font-bold text-text-primary shadow-sm;
   }
 
   .btn-auth {
-    @apply w-full py-4 bg-primary text-white rounded-full font-bold hover:bg-primary-hover transition-all shadow-xl shadow-primary/25 active:scale-[0.98] flex items-center justify-center gap-2;
+    @apply w-full py-4 bg-primary text-white rounded-[18px] font-bold hover:bg-primary-hover transition-all shadow-xl shadow-primary/25 active:scale-[0.98] flex items-center justify-center gap-2;
   }
 }
 
